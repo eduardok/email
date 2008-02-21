@@ -1,0 +1,28 @@
+MAKE = make
+VERSION = @VERSION@
+SRCDIR = @srcdir@
+CC = @CC@
+CFLAGS = @CFLAGS@ @DEFS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+
+prefix = @prefix@
+bindir = @bindir@
+sbindir = @sbindir@
+mandir = @mandir@
+sysconfdir = @sysconfdir@
+
+FILES = email.o dstring.o addr_parse.o addy_book.o conf.o error.o execgpg.o file_io.o \
+        getopt.o getopt1.o hash.o ipfunc.o linked_lists.o message.o   \
+        mimeutils.o processmail.o progress_bar.o remotesmtp.o sig_file.o smtpcommands.o \
+        utils.o
+
+all: $(FILES)
+	$(CC) $(CFLAGS) -o email $(FILES) $(OTHER_FILES) $(LDFLAGS) $(LIBS)
+
+clean:
+	rm -f *.o getopt/*.o *.d getopt/*.d email
+
+clean-all:
+	rm -rf Makefile getopt/*.o *.o getopt/*.d *.d email
+

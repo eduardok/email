@@ -1,0 +1,20 @@
+This file is the THANKS file.
+I want to THANK these specific people for their help 
+and their ugly flames.  THANK you!
+
+Me                    <dj ^at^ cleancode.org>   	 Yes, thank me.
+Josh Sherman          <josh ^at^ cleancode.org>      Debugger, Idea man
+Piotr Szlazak         <piotr.szlazak ^at^ imgw.pl>   Great Tester.
+Robert Lawson         <robert.lawson ^at^ shaw.ca>   Another great help in testing!
+William Shotts        <bshotts ^at^ panix.com>       A great debugger and tester!
+Andrew Y. Mironov     <sysadm ^at^ lenta.ru>         Testing and suggestions on UnixWare 7.11
+NULL                  <ichi ^at^ ihug.co.nz>         Tester 
+Millis Miller         <millis ^at^ faztek.org>       Millis has been an amazing tester/suggester.
+Adrian Tatu-Chitoiu   <aditatu ^at^ easymail.ro>     Submitted a patch to allow a user to specify
+                                                     thier from name and address from the cmd line.
+LBertoglio            <LBertoglio ^at^ tntitaly.it>  Unknowingly found a bug!  
+Matt RobbMarkham      <matt ^at^ ams.co.nz>          Found a bug with email in HP-UX
+Scott Morris          <hexjunky ^at^ yahoo.com>      Portability Tester
+Thomas Lubnig         <undisclosed>                  Staying on my case about the crappy
+                                                     character-by-character socket I/O I left
+                                                     in my code from debugging.

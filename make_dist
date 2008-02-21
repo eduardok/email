@@ -1,0 +1,67 @@
+#!/bin/sh
+
+make_dist_file=`pwd`
+make_dist_file="$make_dist_file/make_dist.out"
+
+if [ -z $1 ]; then
+    echo $0 email_version cvs_branch
+    exit;
+fi
+if [ -z $2 ]; then
+    echo $0 email_version cvs_branch
+    exit;
+fi
+
+branch="$2"
+
+# Check files and make sure we have everyone ready.
+if [ ! -f configure.in.dist ]
+then
+    echo "No configure.in available..."
+    exit -1
+fi
+
+DATE="`date +%x-%I:%M:%S%p_%Z`"
+VERSION="$1"
+
+printf "\rSetting up configure scripts and version info..."
+echo "s!@date@!$DATE!" > "$make_dist_file"
+echo "s!@ver@!$VERSION!" >> "$make_dist_file"
+sed -f "$make_dist_file" configure.in.dist > configure.in
+echo "$VERSION" > VERSION
+autoconf > /dev/null 2>&1
+if [ "$2" = "-b" ]
+then
+    rm -f "$make_dist_file"
+    echo
+    exit;
+fi
+
+
+# Make a temporary directory and cvs export the HEAD
+printf "\rDoing a 'cvs export -r$branch email...            "
+mkdir "$HOME"/temp
+cd "$HOME"/temp
+cvs -Q export -r$branch email
+
+# Move directory over to version release name
+printf "\rCopying email directory to email-$VERSION...   "
+mv email email-"$VERSION"
+sleep 1
+
+# Fix VERSION and configure.ac script in release dir
+printf "\rParsing files and creating ./configure...      "
+cd email-"$VERSION"
+sed -f "$make_dist_file" configure.in.dist > configure.in
+autoconf > /dev/null 2>&1
+rm -f configure.in.dist make_dist
+
+# Tar and gzip distrobution file
+cd ..
+printf "\rTaring and gziping up email-$VERSION...        "
+tar -czf email-"$VERSION".tar.gz email-"$VERSION"
+mv $HOME/temp/email-"$VERSION".tar.gz $HOME
+rm -rf $HOME/temp
+rm -f "$make_dist_file"
+
+printf "\rDistrobution file is at $HOME/email-$VERSION.tar.gz\n"
