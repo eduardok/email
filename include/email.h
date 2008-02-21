@@ -28,8 +28,8 @@
 /* Everyone needs this */
 #include <assert.h>
 
-#include "hash.h"               /* for table_t type */
-#include "linked_lists.h"       /* for list_t type */
+#include <dlist.h>
+#include <dhash.h>
 
 #define MINBUF  300
 #define MAXBUF  600
@@ -50,8 +50,8 @@
 )
 
 /* Globally defined vars */
-list_t tmpfiles;
-table_t table;
+dlist tmpfiles;
+dhash table;
 char *conf_file;
 short quiet;
 
@@ -63,11 +63,11 @@ struct mailer_options {
     short receipt;
     short blank;
     char *subject;
-    list_t attach;
-    list_t headers;
-    list_t to;
-    list_t cc;
-    list_t bcc;
+    dlist attach;
+    dlist headers;
+    dlist to;
+    dlist cc;
+    dlist bcc;
 
 } Mopts;
 

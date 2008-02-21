@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -34,7 +32,54 @@
 
 #include "email.h"
 #include "utils.h"
+#include "dstrbuf.h"
+#include "dutil.h"
 #include "mimeutils.h"
+
+static void
+mimeVecDestr(void *ptr)
+{
+	xfree(ptr);
+}
+
+static dvector
+getMimeExts(const char *line)
+{
+	dvector ret = dvCreate(5, mimeVecDestr);
+	dvector vec = explode(line, " \t");
+	int i, len=dvLength(vec);
+	for (i=1; i < len; i++) {
+		dvAddItem(&ret, xstrdup((char *)vec[i]));
+	}
+	dvDestroy(vec);
+	return ret;
+}
+
+static dstrbuf *
+getMimeType(const char *str)
+{
+	dstrbuf *ret = DSB_NEW;
+	while (*str != ' ' && *str != '\t') {
+		dsbnCat(ret, str, 1);
+		str++;
+	}
+	return ret;
+}
+
+/**
+ * get the name of the file going to be attached from an absolute path 
+**/
+const char *
+mimeFilename(const char *in_name)
+{
+	char *nameptr=NULL;
+
+	nameptr = strrchr(in_name, '/');
+	if (nameptr) {
+		return ++nameptr;
+	}
+	return in_name;
+}
 
 /**
  * executes the 'file' command with the -bi options.
@@ -43,100 +88,76 @@
  * something that does not look like a mime type, then
  * application/unknown is returned.
 **/
-
 #define MAGIC_FILE EMAIL_DIR "/mime-magic.mime"
-#define COMMAND "file -m " MAGIC_FILE
 
-char *
-mime_filetype(const char *filename)
+dstrbuf *
+mimeFiletype(const char *filename)
 {
-    FILE *bin;
-    char *exec;
-    char *type;
-    char buf[100] = { 0 };
+	bool found=false;
+	int i=0, veclen=0;
+	dstrbuf *type=NULL;
+	dstrbuf *buf=DSB_NEW;
+	dvector tmpvec=NULL, vec=NULL;
+	const char *ext=NULL;
+	FILE *file = fopen(MAGIC_FILE, "r");
 
-    assert(filename != NULL);
+	if (!file) {
+		goto exit;
+	}
+	tmpvec = explode(mimeFilename(filename), ".");
+	if (!tmpvec) {
+		goto exit;
+	}
+	ext = tmpvec[1];
+	while (!feof(file)) {
+		dsbReadline(buf, file);
+		if (buf->str[0] == '#') {
+			continue;
+		}
+		type = getMimeType(buf->str);
+		if (!type) {
+			continue;
+		}
+		vec = getMimeExts(buf->str);
+		veclen = dvLength(vec);
+		for (i=0; i < veclen; i++) {
+			if (strcmp((char *)vec[i], ext) == 0) {
+				found = true;
+				break;
+			}
+		}
+		dvDestroy(vec);
+		if (found) {
+			/* Found it! */
+			break;
+		} else {
+			dsbDestroy(type);
+		}
+	}
 
-    /* Plus 15 for spaces and ' 2> /dev/null' and also a space for NUL */
-    exec = xmalloc(strlen(COMMAND) + strlen(filename) + 15);
-    sprintf(exec, "%s '%s' 2> /dev/null", COMMAND, filename);
-
-    bin = popen(exec, "r");
-    if (!bin)
-        goto DEFAULT_EXIT;
-
-    while (fgets(buf, sizeof(buf), bin)) {
-        /**
-         * Make sure we don't loop again if we
-         * are already at EOF.
-        **/
-
-        if (feof(bin))
-            break;
-    }
-
-    pclose(bin);
-    free(exec);
-    chomp(buf);
-
-    /* Get past the name specified */
-    type = strchr(buf, ':');
-    if (!type)
-        goto DEFAULT_EXIT;
-
-    /* Get past ':' and any spaces */
-    type++;
-    while (is_blank(*type))
-        type++;
-
-    /* Nothing found  OR not in MIME format of type/subtype */
-    if (!strchr(type, '/'))
-        goto DEFAULT_EXIT;
-
-    /* If a comma is found, only give portion before comma */
-    if (strchr(type, ','))
-        return (xstrdup(strtok(type, ",")));
-
-    /* if we are here, just return the string as is */
-    return (xstrdup(type));
-
-  DEFAULT_EXIT:
-    return (xstrdup("application/unknown"));
-}
-
-
-/**
- * get the name of the file going to be attached from an absolute path 
-**/
-
-char *
-mime_filename(char *in_name)
-{
-    char *nameptr;
-
-    nameptr = strrchr(in_name, '/');
-    if (nameptr)
-        return (++nameptr);
-
-    return (in_name);
+exit:
+	dvDestroy(tmpvec);
+	dsbDestroy(buf);
+	fclose(file);
+	if (!type) {
+		type = DSB_NEW;
+		dsbCopy(type, "application/unknown");
+	}
+	return type;
 }
 
 /**
  * Makes a boundary for Mime emails 
 **/
-
 char *
-mime_make_boundary(char *buf, size_t size)
+mimeMakeBoundary(char *buf, size_t size)
 {
-    char *tmp = buf;
+	char *tmp = buf;
 
-    strncpy(buf, "=-", size);
-
-    tmp++;
-    tmp++;                      /* get past the =- we just added */
-    random_string(tmp, size - 2);
-
-    return (buf);
+	strncpy(buf, "=-", size);
+	tmp += 2; /* get past the =- we just added */
+	randomString(tmp, size - 2);
+	return buf;
 }
 
 /**
@@ -151,90 +172,91 @@ mime_make_boundary(char *buf, size_t size)
 #define MAX_B64_LINE 72
 
 /* Our base64 table of chars */
-static const char cb64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "abcdefghijklmnopqrstuvwxyz" "0123456789+/";
+static const char cb64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 
+			   "abcdefghijklmnopqrstuvwxyz" 
+			   "0123456789+/";
 
 /**
  * encode 3 8-bit binary bytes as 4 '6-bit' characters
 **/
 
 static void
-b64_encodeblock(const u_char in[3], u_char out[4], int len)
+mimeB64EncodeBlock(const u_char in[3], u_char out[4], int len)
 {
-    out[0] = cb64[in[0] >> 2];
-    out[1] = cb64[((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4)];
-    out[2] = (u_char) (len > 1 ? cb64[((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6)] : '=');
-    out[3] = (u_char) (len > 2 ? cb64[in[2] & 0x3f] : '=');
+	out[0] = cb64[in[0] >> 2];
+	out[1] = cb64[((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4)];
+	out[2] = (u_char) (len > 1 ? cb64[((in[1] & 0x0f) << 2) | 
+		 ((in[2] & 0xc0) >> 6)] : '=');
+	out[3] = (u_char) (len > 2 ? cb64[in[2] & 0x3f] : '=');
 }
+
 
 /**
  * Encode_file will encode file infile placing it 
  * in file outfile including padding and EOL of \r\n properly
 **/
-
 int
-mime_b64_encode_file(FILE *infile, FILE *outfile)
+mimeB64EncodeFile(FILE *infile, FILE *outfile)
 {
-    u_char in[3], out[4];
-    int i, len, blocksout = 0;
+	u_char in[3], out[4];
+	int i, len, blocksout = 0;
 
-    while (!feof(infile)) {
-        len = 0;
-        for (i = 0; i < 3; i++) {
-            in[i] = (u_char) getc(infile);
-            if (!feof(infile))
-                len++;
-            else
-                in[i] = 0;
-        }
+	while (!feof(infile)) {
+	len = 0;
+	for (i = 0; i < 3; i++) {
+		in[i] = (u_char) getc(infile);
+		if (!feof(infile)) {
+			len++;
+		} else {
+			in[i] = 0;
+		}
+	}
 
-        if (len) {
-            b64_encodeblock(in, out, len);
-            for (i = 0; i < 4; i++)
-                putc(out[i], outfile);
+	if (len) {
+		mimeB64EncodeBlock(in, out, len);
+		for (i = 0; i < 4; i++) {
+			putc(out[i], outfile);
+		}
+		blocksout++;
+	}
 
-            blocksout++;
-        }
+	if (blocksout >= (MAX_B64_LINE / 4) || feof(infile)) {
+		if (blocksout) {
+			fprintf(outfile, "\r\n");
+		}
+		blocksout = 0;
+	}
 
-        if (blocksout >= (MAX_B64_LINE / 4) || feof(infile)) {
-            if (blocksout)
-                fprintf(outfile, "\r\n");
+	if (ferror(infile) || ferror(outfile))
+		return -1;
+	}
 
-            blocksout = 0;
-        }
-
-        if (ferror(infile) || ferror(outfile))
-            return (-1);
-    }
-
-    return (0);
+	return 0;
 }
 
-char *
-mime_b64_encode_string(const u_char *inbuf, size_t len, u_char *outbuf, size_t size)
+/**
+ * Encode a string into base64.
+ */
+dstrbuf *
+mimeB64EncodeString(const u_char *inbuf, size_t len)
 {
-    u_char encblock[5] = { 0 };
+	dstrbuf *retbuf = dsbNew(100);
+	u_char encblock[5] = {0};
 
-    /* Output buffer is not large enough */
-    if (size < (len * (len / 3)) + 2)
-        return (NULL);
-
-    while (len) {
-        if (len > 3) {
-            b64_encodeblock(inbuf, encblock, 3);
-            inbuf += 3;
-            len -= 3;
-        }
-        else {
-            b64_encodeblock(inbuf, encblock, len);
-            len -= len;
-        }
-
-        safeconcat(outbuf, encblock, size);
-    }
-
-    return (outbuf);
+	while (len) {
+		if (len > 3) {
+			mimeB64EncodeBlock(inbuf, encblock, 3);
+			inbuf += 3;
+			len -= 3;
+		}
+		else {
+			mimeB64EncodeBlock(inbuf, encblock, len);
+			len -= len;
+		}
+		dsbCat(retbuf, (char *)encblock);
+	}
+	return retbuf;
 }
-
 
 /* RFC 2045 standard line length not counting CRLF */
 #define QP_MAX_LINE_LEN 76
@@ -252,92 +274,94 @@ mime_b64_encode_string(const u_char *inbuf, size_t len, u_char *outbuf, size_t s
 **/
 
 static int
-qp_is_encodable(int c)
+qpIsEncodable(int c)
 {
-    if (((c >= 9) && (c <= 60)) || ((c >= 62) && (c <= 126)))
-        return (0);
-    return (1);
+	if (((c >= 9) && (c <= 60)) || ((c >= 62) && (c <= 126))) {
+		return 0;
+	}
+	return 1;
 }
 
 static void
-qp_stdout(int ch, int *curr_len, FILE *out)
+qpStdout(int ch, int *curr_len, FILE *out)
 {
-    if (*curr_len == (QP_MAX_LINE_LEN - 1)) {
-        fprintf(out, "=\r\n");
-        *curr_len = 0;
-    }
+	if (*curr_len == (QP_MAX_LINE_LEN - 1)) {
+		fprintf(out, "=\r\n");
+		*curr_len = 0;
+	}
 
-    fprintf(out, "%c", ch);
-    (*curr_len)++;
+	fprintf(out, "%c", ch);
+	(*curr_len)++;
 }
 
 static void
-qp_encout(int ch, int *curr_len, FILE *out)
+qpEncout(int ch, int *curr_len, FILE *out)
 {
-    if ((*curr_len + 3) >= QP_MAX_LINE_LEN) {
-        fprintf(out, "=\r\n");
-        *curr_len = 0;
-    }
+	if ((*curr_len + 3) >= QP_MAX_LINE_LEN) {
+		fprintf(out, "=\r\n");
+		*curr_len = 0;
+	}
 
-    fprintf(out, "=%02X", ch);
-    *curr_len += 3;
+	fprintf(out, "=%02X", ch);
+	*curr_len += 3;
 }
 
 /**
  * Encode a quoted printable string.
 **/
-
 static void
-qp_encode_str(char *str, int *len, FILE *out)
+qpEncodeStr(const char *str, int *len, FILE *out)
 {
-    int line_len = *len;
+	int line_len = *len;
 
-    for (; *str != '\0'; str++) {
-        if (line_len == (QP_MAX_LINE_LEN - 1)) {
-            fprintf(out, "=\r\n");
-            line_len = 0;
-        }
+	for (; *str != '\0'; str++) {
+		if (line_len == (QP_MAX_LINE_LEN - 1)) {
+			fprintf(out, "=\r\n");
+			line_len = 0;
+		}
 
-        switch (*str) {
-            case ' ':
-            case '\t':
-                if ((str[1] == '\r') || (str[1] == '\n'))
-                    qp_encout(*str, &line_len, out);
-                else
-                    qp_stdout(*str, &line_len, out);
-                break;
+		switch (*str) {
+		case ' ':
+		case '\t':
+			if ((str[1] == '\r') || (str[1] == '\n')) {
+				qpEncout(*str, &line_len, out);
+			} else {
+				qpStdout(*str, &line_len, out);
+			}
+			break;
+		case '\r':
+			str++;          /* Get to newline */
+		case '\n':
+			fprintf(out, "\r\n");
+			line_len = 0;
+			break;
+		default:
+			if (qpIsEncodable(*str)) {
+				qpEncout(*str, &line_len, out);
+			} else {
+				qpStdout(*str, &line_len, out);
+			}
+			break;
+		}
+	}
 
-            case '\r':
-                str++;          /* Get to newline */
-            case '\n':
-                fprintf(out, "\r\n");
-                line_len = 0;
-                break;
-
-            default:
-                if (qp_is_encodable(*str))
-                    qp_encout(*str, &line_len, out);
-                else
-                    qp_stdout(*str, &line_len, out);
-                break;
-        }
-    }
-
-    /* Reset length */
-    *len = line_len;
+	/* Reset length */
+	*len = line_len;
 }
 
 int
-mime_qp_encode_file(FILE *in, FILE *out)
+mimeQpEncodeFile(FILE *in, FILE *out)
 {
     int line_len = 0;
     char buf[MAXBUF] = { 0 };
 
-    while (fgets(buf, sizeof(buf), in))
-        qp_encode_str(buf, &line_len, out);
+	while (fgets(buf, sizeof(buf), in)) {
+		qpEncodeStr(buf, &line_len, out);
+	}
 
-    if (ferror(in) || ferror(out))
-        return (-1);
-
-    return (0);
+	if (ferror(in) || ferror(out)) {
+		return -1;
+	}
+	return 0;
 }
+

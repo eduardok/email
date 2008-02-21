@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,17 +19,15 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef _MIMEUTILS_H
 #define _MIMEUTILS_H  1
 
-
-char *mime_make_boundary(char *, size_t);
-char *mime_filetype(const char *);
-char *mime_filename(char *);
-int mime_qp_encode_file(FILE *, FILE *);
-int mime_b64_encode_file(FILE *, FILE *);
-char *mime_b64_encode_string(const u_char *, size_t, u_char *, size_t);
+char *mimeMakeBoundary(char *buf, size_t size);
+dstrbuf *mimeFiletype(const char *filename);
+const char *mimeFilename(const char *in_name);
+int mimeQpEncodeFile(FILE *in, FILE *out);
+int mimeB64EncodeFile(FILE *in, FILE *out);
+dstrbuf *mimeB64EncodeString(const u_char *inbuf, size_t len);
 
 #endif /* _MIMEUTILS_H */
