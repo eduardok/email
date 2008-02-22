@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -26,25 +25,13 @@
 #define __UTILS_H   1
 
 #include <sys/types.h>
-#include "linked_lists.h"
+#include "dstrbuf.h"
 
-int is_blank(int);
-int safeconcat(char *, const char *, size_t);
-void expand_path(char *, char *, size_t);
-void chomp(char *);
-void *xrealloc(void *, size_t);
-void *xmalloc(size_t);
-void *xcalloc(size_t, size_t);
-char *xstrdup(const char *);
-int copyfile(const char *, const char *);
-void dead_letter(void);
-void random_string(char *, size_t);
-char *getfirstemail(void);
-char *create_tmpname(char *, size_t);
-void destroy_tmpfiles(list_t);
-void set_conf_value(const char *, const char *);
-char *get_conf_value(const char *);
-void proper_exit(int);
-int explode_to_list(char *str, const char *del, list_t *ret);
+dstrbuf *expandPath(const char *path);
+int copyfile(const char *from, const char *to);
+void deadLetter(dstring *msg);
+dstrbuf *randomString(size_t size);
+dstrbuf *getFirstEmail(void);
+void properExit(int sig);
 
 #endif /* __UTILS_H */

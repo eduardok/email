@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef __EMAIL_H
 #define __EMAIL_H   1
@@ -49,28 +47,34 @@
       __FILE__, __FUNCTION__, __LINE__, (str)) \
 )
 
+struct addr {
+	char *name;
+	char *email;
+};
+
 /* Globally defined vars */
-dlist tmpfiles;
 dhash table;
 char *conf_file;
 short quiet;
 
 struct mailer_options {
-    short html;
-    short encrypt;
-    short sign;
-    short priority;
-    short receipt;
-    short blank;
-    char *subject;
-    dlist attach;
-    dlist headers;
-    dlist to;
-    dlist cc;
-    dlist bcc;
-
+	short html;
+	short encrypt;
+	short sign;
+	short priority;
+	short receipt;
+	short blank;
+	char *subject;
+	dlist attach;
+	dlist headers;
+	dlist to;
+	dlist cc;
+	dlist bcc;
 } Mopts;
 
 void usage(void);
+
+#define setConfValue(tok, val) (dhInsert(table, (tok), (val)))
+#define getConfValue(tok) ((char *)dhGetItem(table, (tok)))
 
 #endif /* __EMAIL_H */
