@@ -27,10 +27,11 @@
 #include <assert.h>
 
 #include <dlib.h>
+#include <dstrbuf.h>
 #include <dlist.h>
 #include <dhash.h>
+#include <dutil.h>
 
-#define MINBUF  300
 #define MAXBUF  600
 #define ERROR   -6
 #define TRUE    1

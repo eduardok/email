@@ -37,7 +37,6 @@
 #include "email.h"
 #include "conf.h"
 #include "utils.h"
-#include "dstring.h"
 #include "error.h"
 
 #define MAX_CONF_VARS 20
@@ -92,7 +91,7 @@ hashit(const char *var, const char *val)
 		return -1;
 	} else if ((*var == '\0') || (*val == '\0')) {
 		/* Something went wrong */
-		return (ERROR);
+		return ERROR;
 	}
 	setConfValue(var, val);
 	return 0;
@@ -129,7 +128,7 @@ readConfig(FILE * in)
 				ch = fgetc(in);
 			}
 			if (ch != '\n') {
-				dsbnCopy(ptr, &ch, 1);
+				dsbnCopy(ptr, (char *)&ch, 1);
 			}
 			line++;
 			/* If this char is a newline, 
@@ -151,10 +150,10 @@ readConfig(FILE * in)
 			}
 			break;
 		case '=':
-			if (dstring_getLength(val) != 0) {
+			if (val->len != 0) {
 				ch = line;
 				goto exit;
-			} else if (check_var(var) < 0) {
+			} else if (checkVar(var) < 0) {
 				fatal("Variable: '%s' is not valid\n", var);
 				ch = line;
 				goto exit;
@@ -174,7 +173,7 @@ readConfig(FILE * in)
 			/* Handle Newlines below */
 			break;
 		default:
-			dsbnCopy(ptr, &ch, 1);
+			dsbnCopy(ptr, (char *)&ch, 1);
 			break;
 		}
 
@@ -270,6 +269,7 @@ getSystemEmail(void)
 FILE *
 openConfig(void)
 {
+	FILE *config=NULL;
 	if (conf_file == NULL) {
 		dstrbuf *hconfig = expandPath("~/.email.conf");
 		config = fopen(hconfig->str, "r");

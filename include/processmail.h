@@ -23,7 +23,7 @@
 #ifndef PROCESSMAIL_H
 #define PROCESSMAIL_H  1
 
-int processInternal(char *smbin, dstrbuf *msg);
+int processInternal(const char *smbin, dstrbuf *msg);
 int processRemote(const char *host, int port, dstrbuf *msg);
 
 #endif /* PROCESSMAIL_H */

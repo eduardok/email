@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 
 #include "email.h"
-#include "dsocket.h"
+#include "dnet.h"
 #include "utils.h"
 #include "smtpcommands.h"
 #include "processmail.h"
@@ -55,7 +55,8 @@ processInternal(const char *sm_bin, dstrbuf *msgcon)
 	bar = prbarInit(msgcon->len);
 	smpath = expandPath(sm_bin);
 
-	open_sendmail = popen(path_to_sendmail, "w");
+	open_sendmail = popen(smpath->str, "w");
+	dsbDestroy(smpath);
 	if (!open_sendmail) {
 		fatal("Could not open internal sendmail path: %s", smpath->str);
 		return ERROR;
@@ -113,7 +114,7 @@ int
 processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 {
 	dsocket *sd;
-	int retval;
+	int retval, bytes;
 	char *smtp_auth = NULL;
 	char *email_addr = NULL;
 	char *user = NULL;
@@ -121,6 +122,7 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 	struct prbar *bar=NULL;
 	char nodename[MINBUF] = { 0 };
 	char *ptr = msg->str;
+	struct addr *next=NULL;
 
 	email_addr = getConfValue("MY_EMAIL");
 	if (gethostname(nodename, sizeof(nodename) - 1) < 0) {

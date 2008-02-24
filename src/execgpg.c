@@ -71,9 +71,9 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 {
 	int retval;
 	FILE *retfile;
-	char *encto;
 	char *gpg_bin, *gpg_pass;
 	char filename[TMP_MAX]={0};
+	dstrbuf *encto=NULL;
 	dstrbuf *gpg=NULL;
 	dstrbuf *cmd=NULL;
 	dstrbuf *buf=NULL;
@@ -94,16 +94,18 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	dsbPrintf(cmd, "%s -a -o '%s' --no-secmem-warning --passphrase-fd 0 "
 		" --no-tty", gpg->str, filename);
 	if (call_type == GPG_SIG) {
-		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto);
+		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", 
+			encto->str);
 	} else if (call_type == GPG_ENC) {
 		dsbPrintf(cmd, " -a -r -e ");
 	} else {
-		dsbPrintf(cmd, " -r '%s' -s -e", encto);
+		dsbPrintf(cmd, " -r '%s' -s -e", encto->str);
 	}
-	retval = execgpg(cmd->str, gpg_pass);
+	retval = execgpg(cmd->str, gpg_pass, input->str);
 
 	free(encto);
 	dsbDestroy(cmd);
+	dsbDestroy(encto);
 
 	if (retval == -1) {
 		fatal("Error executing: %s", gpg->str);

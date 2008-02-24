@@ -141,9 +141,9 @@ copyfile(const char *from, const char *to)
  * it will move it to the users home directory as dead.letter.
 **/
 void
-deadLetter(dstring *msg)
+deadLetter(dstrbuf *msg)
 {
-	dstring *path = expandPath("~/dead.letter");
+	dstrbuf *path = expandPath("~/dead.letter");
 	FILE *out = fopen(path->str, "w");
 
 	if (!out) {
@@ -151,6 +151,7 @@ deadLetter(dstring *msg)
 	} else {
 		fwrite(msg->str, sizeof(char), msg->len, out);
 	}
+	dsbDestroy(path);
 }
 
 
@@ -222,7 +223,7 @@ void
 properExit(int sig)
 {
 	if (sig != 0) {
-		deadLetter();
+		//deadLetter();
 	}
 
 	/* Free lists */
@@ -244,5 +245,33 @@ properExit(int sig)
 
 	dhDestroy(table);
 	exit(sig);
+}
+
+int
+copyUpTo(dstrbuf *buf, int stop, FILE *in)
+{
+	int ch;
+	while ((ch = fgetc(in)) != EOF) {
+		if (ch == '\\') {
+			ch = fgetc(in);
+			if (ch == '\r') {
+				ch = fgetc(in);
+			}
+			if (ch == '\n') {
+				continue;
+			}
+		}
+		if (ch == '\r') {
+			ch = fgetc(in);
+			if (ch == '\n') {
+				return ch;
+			}
+		}
+		if (ch == stop) {
+			return ch;
+		}
+		dsbnCat(buf, (char *)&ch, 1);
+	}
+	return ch;
 }
 

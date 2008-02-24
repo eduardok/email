@@ -103,11 +103,14 @@ mimeFiletype(const char *filename)
 	dvector tmpvec=NULL, vec=NULL;
 	const char *ext=NULL;
 	FILE *file = fopen(MAGIC_FILE, "r");
+	dstrbuf *filen=NULL;
 
 	if (!file) {
 		goto exit;
 	}
-	tmpvec = explode(mimeFilename(filename), ".");
+	filen = mimeFilename(filename);
+	tmpvec = explode(filen->str, ".");
+	dsbDestroy(filen);
 	if (!tmpvec) {
 		goto exit;
 	}
@@ -214,7 +217,7 @@ mimeB64EncodeFile(FILE *infile, dstrbuf *outbuf)
 		}
 		if (len) {
 			mimeB64EncodeBlock(in, out, len);
-			dsbnCat(outbuf, out, 4);
+			dsbnCat(outbuf, (char *)out, 4);
 			blocksout++;
 		}
 		if (blocksout >= (MAX_B64_LINE / 4) || feof(infile)) {
@@ -279,40 +282,41 @@ qpIsEncodable(int c)
 }
 
 static void
-qpStdout(int ch, int *curr_len, FILE *out)
+qpStdout(int ch, int *curr_len, dstrbuf *out)
 {
 	if (*curr_len == (QP_MAX_LINE_LEN - 1)) {
-		fprintf(out, "=\r\n");
+		dsbPrintf(out, "=\r\n");
 		*curr_len = 0;
 	}
 
-	fprintf(out, "%c", ch);
+	dsbPrintf(out, "%c", ch);
 	(*curr_len)++;
 }
 
 static void
-qpEncout(int ch, int *curr_len, FILE *out)
+qpEncout(int ch, int *curr_len, dstrbuf *out)
 {
 	if ((*curr_len + 3) >= QP_MAX_LINE_LEN) {
-		fprintf(out, "=\r\n");
+		dsbPrintf(out, "=\r\n");
 		*curr_len = 0;
 	}
 
-	fprintf(out, "=%02X", ch);
+	dsbPrintf(out, "=%02X", ch);
 	*curr_len += 3;
 }
 
 /**
  * Encode a quoted printable string.
 **/
-static void
-qpEncodeStr(const char *str, int *len, FILE *out)
+void
+mimeQpEncodeStr(dstrbuf *in, dstrbuf *out)
 {
-	int line_len = *len;
+	int line_len = in->len;
+	char *str = in->str;
 
 	for (; *str != '\0'; str++) {
 		if (line_len == (QP_MAX_LINE_LEN - 1)) {
-			fprintf(out, "=\r\n");
+			dsbPrintf(out, "=\r\n");
 			line_len = 0;
 		}
 
@@ -328,7 +332,7 @@ qpEncodeStr(const char *str, int *len, FILE *out)
 		case '\r':
 			str++;          /* Get to newline */
 		case '\n':
-			fprintf(out, "\r\n");
+			dsbPrintf(out, "\r\n");
 			line_len = 0;
 			break;
 		default:
@@ -340,24 +344,5 @@ qpEncodeStr(const char *str, int *len, FILE *out)
 			break;
 		}
 	}
-
-	/* Reset length */
-	*len = line_len;
-}
-
-int
-mimeQpEncodeFile(FILE *in, FILE *out)
-{
-    int line_len = 0;
-    char buf[MAXBUF] = { 0 };
-
-	while (fgets(buf, sizeof(buf), in)) {
-		qpEncodeStr(buf, &line_len, out);
-	}
-
-	if (ferror(in) || ferror(out)) {
-		return -1;
-	}
-	return 0;
 }
 

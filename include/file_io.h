@@ -24,6 +24,6 @@
 #define FILE_IO_H   1
 
 dstrbuf *readInput(void);
-dstrbuf *editFile(void);
+dstrbuf *editEmail(void);
 
 #endif /* FILE_IO_H */

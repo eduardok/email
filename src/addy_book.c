@@ -170,7 +170,7 @@ getEntry(ENTRY *en, struct addr *ent, FILE *book)
 				ch = fgetc(book);
 			}
 			if (ch != '\n') {
-				dsbnCopy(ptr, &ch, 1);
+				dsbnCopy(ptr, (char *)&ch, 1);
 			}
 			line++;
 			ch = 0;
@@ -214,7 +214,7 @@ getEntry(ENTRY *en, struct addr *ent, FILE *book)
 			/* Handle newlines below */
 			break;
 		default:
-			dsbnCopy(ptr, &ch, 1);
+			dsbnCopy(ptr, (char *)&ch, 1);
 			break;
 		}
 
@@ -268,6 +268,52 @@ insertEntry(dlist to, const char *name, const char *addr)
 }
 
 /**
+ * This function checks each address in tmp and formats it
+ * properly and copies it over to the new list.
+**/
+static void
+checkAndCopy(dlist to, dlist from)
+{
+	struct addr *next = NULL;
+	while ((next=dlGetNext(from)) != NULL) {
+		insertEntry(to, next->name, next->email);
+	}
+}
+
+static int addEntry(dlist to, ENTRY *en, FILE *book);
+
+/**
+ * Loops through the linked list and calls Get_entry for
+ * each name in the linked list.  It will add each entry into
+ * the 'to' linked lists when an appropriate match is found
+ * from the address book.
+**/
+static int
+checkAddrBook(dlist to, dlist from, FILE *book)
+{
+	ENTRY en;
+	int retval;
+	struct addr *next=NULL;
+
+	/* Go through list from, resolving to list curr */
+	while ((next=(struct addr *)dlGetNext(from)) != NULL) {
+		retval = getEntry(&en, next, book);
+		if (retval > 0) {
+			fatal("Address book incorrectly formated on line %d\n", retval);
+			return ERROR;
+		} else if (retval == EOF) {
+			insertEntry(to, NULL, next->email);
+		} else {
+			if (addEntry(to, &en, book) == ERROR) {
+				return ERROR;
+			}
+		}
+		freeEntry(&en);
+	}
+	return 0;
+}
+
+/**
  * Add an entry to the linked lists.
  * If entry is a group, we must separate the people inside of 
  * the group and re-call check_addr_book for those entries.
@@ -309,50 +355,6 @@ addEntry(dlist to, ENTRY *en, FILE *book)
 	return 0;
 }
 
-/**
- * Loops through the linked list and calls Get_entry for
- * each name in the linked list.  It will add each entry into
- * the 'to' linked lists when an appropriate match is found
- * from the address book.
-**/
-static int
-checkAddrBook(dlist to, dlist from, FILE *book)
-{
-	ENTRY en;
-	int retval;
-	struct addr *next=NULL;
-
-	/* Go through list from, resolving to list curr */
-	while ((next=dlGetNext(from)) != NULL) {
-		retval = getEntry(&en, next, book);
-		if (retval > 0) {
-			fatal("Address book incorrectly formated on line %d\n", retval);
-			return ERROR;
-		}
-		} else if (retval == EOF) {
-			insertEntry(to, NULL, next->email);
-		} else {
-			if (addEntry(to, &en, book) == ERROR) {
-				return ERROR;
-			}
-		}
-		freeEntry(&en);
-	}
-	return 0;
-}
-
-/**
- * This function checks each address in tmp and formats it
- * properly and copies it over to the new list.
-**/
-static void
-checkAndCopy(dlist to, dlist from)
-{
-	struct addr *next = NULL;
-	while ((next=dlGetNext(from)) != NULL) {
-		insertEntry(to, next->name, next->email);
-	}
-}
 
 /** 
  * GetNames just calls the correct functions to 
@@ -361,7 +363,7 @@ checkAndCopy(dlist to, dlist from)
  * a linked list 'list_t' with the correct separate names.
 **/
 dlist
-getNames(const char *string)
+getNames(char *string)
 {
 	FILE *book;
 	char *addr_book;
@@ -377,7 +379,7 @@ getNames(const char *string)
 	}
 
 	if (!addr_book) {
-		checkAndCopy(&ret_storage, tmp);
+		checkAndCopy(ret_storage, tmp);
 	} else {
 		bpath = expandPath(addr_book);
 		book = fopen(bpath->str, "r");
@@ -385,7 +387,7 @@ getNames(const char *string)
 			fatal("Can't open address book: '%s'\n", bpath->str);
 			return NULL;
 		}
-		if (checkAddrBook(&ret_storage, tmp, book) == ERROR) {
+		if (checkAddrBook(ret_storage, tmp, book) == ERROR) {
 			dlDestroy(tmp);
 			dlDestroy(ret_storage);
 			return (NULL);

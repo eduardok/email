@@ -58,65 +58,12 @@
 #include "error.h"
 
 /**
- * This function takes the current content that was copied
- * in to us and creates a final message with the email header
- * and the appended content.  It will also attach any files
- * that were specified at the command line.
-**/
-static void
-printHeaders(const char *border, dstrbuf *msg)
-{
-	char *sm_bin = NULL;
-	char *smtp_serv = NULL;
-	char *reply_to = NULL;
-	char *user_name = NULL;
-	char *email_addr = NULL;
-
-	user_name = getConfValue("MY_NAME");
-	email_addr = getConfValue("MY_EMAIL");
-	sm_bin = getConfValue("SENDMAIL_BIN");
-	smtp_serv = getConfValue("SMTP_SERVER");
-	reply_to = getConfValue("REPLY_TO");
-
-	if (Mopts.subject) {
-		dsbPrintf(msg, "Subject: %s\r\n", Mopts.subject);
-	}
-	printFromHeaders(user_name, email_addr, message);
-	printToHeaders(Mopts.to, Mopts.cc, message);
-
-	/**
-	 * We want to check here to see if we are sending mail by invoking sendmail
-	 * If so, We want to add the BCC line to the headers.  Sendmail checks this
-	 * Line and makes sure it sends the mail to the BCC people, and then remove
-	 * the BCC addresses...  Keep in mind that sending to an smtp servers takes
-	 * presidence over sending to sendmail incase both are mentioned.
-	 */
-	if (sm_bin && !smtp_serv) {
-		printBccHeaders(Mopts.bcc, msg);
-	}
-
-	/* The rest of the standard headers */
-	printDateHeaders(msg);
-	if (reply_to) {
-		dsbPrintf(msg, "Reply-To: <%s>\r\n", reply_to);
-	}
-	printMimeHeaders(border, msg);
-	dsbPrintf(msg, "X-Mailer: Cleancode.email v%s \r\n", EMAIL_VERSION);
-	if (Mopts.priority) {
-		dsbPrintf(msg, "X-Priority: 1\r\n");
-	}
-	printExtraHeaders(Mopts.headers, message);
-	dsbPrintf(msg, "\r\n");
-}
-
-/**
  * All functions below are pretty self explanitory.  
  * They basically just preform some simple header printing 
  * for our email 'message'.  I'm not doing to comment every 
  * function from here because you should be able to read the 
  * damn functions and get a great idea
 **/
-
 static void
 printMimeHeaders(const char *b, dstrbuf *msg)
 {
@@ -135,10 +82,10 @@ printMimeHeaders(const char *b, dstrbuf *msg)
 		dsbPrintf(msg, "Content-Type: multipart/mixed; boundary=\"%s\"\r\n", b);
 	} else {
 		if (Mopts.html) {
-			dsbPrintf(message, "Mime-Version: 1.0\r\n");
-			dsbPrintf(message, "Content-Type: text/html\r\n");
+			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
+			dsbPrintf(msg, "Content-Type: text/html\r\n");
 		} else {
-			dsbPrintf(message, "Content-Type: text/plain\r\n");
+			dsbPrintf(msg, "Content-Type: text/plain\r\n");
 		}
 	}
 }
@@ -150,10 +97,11 @@ static void
 printToHeaders(dlist to, dlist cc, dstrbuf *msg)
 {
 	struct addr *a = (struct addr *)dlGetNext(to);
-	fprintf(msg, "To: ");
+	dsbPrintf(msg, "To: ");
 	while (a) {
 		dstrbuf *tmp = formatEmailAddr(a->name, a->email);
 		dsbPrintf(msg, "%s", tmp->str);
+		dsbDestroy(tmp);
 		a = (struct addr *)dlGetNext(to);
 		if (a != NULL) {
 			dsbPrintf(msg, ", ");
@@ -163,11 +111,12 @@ printToHeaders(dlist to, dlist cc, dstrbuf *msg)
 	}
 
 	if (cc != NULL) {
-		fprintf(message, "Cc: ");
+		dsbPrintf(msg, "Cc: ");
 		a = (struct addr *)dlGetNext(cc);
 		while (a) {
 			dstrbuf *tmp = formatEmailAddr(a->name, a->email);
-			fprintf(message, "%s", buf);
+			dsbPrintf(msg, "%s", tmp->str);
+			dsbDestroy(tmp);
 			a = (struct addr *)dlGetNext(cc);
 			if (a != NULL) {
 				dsbPrintf(msg, ", ");
@@ -251,6 +200,59 @@ printExtraHeaders(dlist headers, dstrbuf *msg)
 }
 
 /**
+ * This function takes the current content that was copied
+ * in to us and creates a final message with the email header
+ * and the appended content.  It will also attach any files
+ * that were specified at the command line.
+**/
+static void
+printHeaders(const char *border, dstrbuf *msg)
+{
+	char *sm_bin = NULL;
+	char *smtp_serv = NULL;
+	char *reply_to = NULL;
+	char *user_name = NULL;
+	char *email_addr = NULL;
+
+	user_name = getConfValue("MY_NAME");
+	email_addr = getConfValue("MY_EMAIL");
+	sm_bin = getConfValue("SENDMAIL_BIN");
+	smtp_serv = getConfValue("SMTP_SERVER");
+	reply_to = getConfValue("REPLY_TO");
+
+	if (Mopts.subject) {
+		dsbPrintf(msg, "Subject: %s\r\n", Mopts.subject);
+	}
+	printFromHeaders(user_name, email_addr, msg);
+	printToHeaders(Mopts.to, Mopts.cc, msg);
+
+	/**
+	 * We want to check here to see if we are sending mail by invoking sendmail
+	 * If so, We want to add the BCC line to the headers.  Sendmail checks this
+	 * Line and makes sure it sends the mail to the BCC people, and then remove
+	 * the BCC addresses...  Keep in mind that sending to an smtp servers takes
+	 * presidence over sending to sendmail incase both are mentioned.
+	 */
+	if (sm_bin && !smtp_serv) {
+		printBccHeaders(Mopts.bcc, msg);
+	}
+
+	/* The rest of the standard headers */
+	printDateHeaders(msg);
+	if (reply_to) {
+		dsbPrintf(msg, "Reply-To: <%s>\r\n", reply_to);
+	}
+	printMimeHeaders(border, msg);
+	dsbPrintf(msg, "X-Mailer: Cleancode.email v%s \r\n", EMAIL_VERSION);
+	if (Mopts.priority) {
+		dsbPrintf(msg, "X-Priority: 1\r\n");
+	}
+	printExtraHeaders(Mopts.headers, msg);
+	dsbPrintf(msg, "\r\n");
+}
+
+
+/**
  * set up the appropriate MIME and Base64 headers for 
  * the attachment of file specified in Mopts.attach
 **/
@@ -279,13 +281,13 @@ attachFiles(const char *boundary, dstrbuf *out)
 		file_name = mimeFilename(next_file);
 
 		/* Set our MIME headers */
-		fprintf(out, "\r\n--%s\r\n", boundary);
-		fprintf(out, "Content-Transfer-Encoding: base64\r\n");
-		fprintf(out, "Content-Type: %s; name=\"%s\"\r\n", 
+		dsbPrintf(out, "\r\n--%s\r\n", boundary);
+		dsbPrintf(out, "Content-Transfer-Encoding: base64\r\n");
+		dsbPrintf(out, "Content-Type: %s; name=\"%s\"\r\n", 
 			file_type->str, file_name->str);
-		fprintf(out, "Content-Disposition: attachment; filename=\"%s\"\r\n", 
+		dsbPrintf(out, "Content-Disposition: attachment; filename=\"%s\"\r\n", 
 			file_name->str);
-		fprintf(out, "\r\n");
+		dsbPrintf(out, "\r\n");
 
 		/* Encode to 'out' */
 		mimeB64EncodeFile(current, out);
@@ -346,7 +348,7 @@ makeGpgMessage(dstrbuf *in, dstrbuf *out, const char *border)
 	}
 
 	dsbPrintf(out, "Content-Transfer-Encoding: quoted-printable\r\n\r\n");
-	mimeQpEncodeData(in, out);
+	mimeQpEncodeStr(in, out);
 	if (Mopts.attach) {
 		attachFiles(border, out);
 		dsbPrintf(out, "\r\n--%s--\r\n", border);
@@ -363,7 +365,7 @@ static dstrbuf *
 createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 {
 	dstrbuf *gpgdata=NULL, *buf=DSB_NEW;
-	dstrbuf *border1, *border2;
+	dstrbuf *border1=NULL, *border2=NULL;
 
 	assert(msg != NULL);
 
@@ -373,7 +375,7 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 		border2 = mimeMakeBoundary();
 	}
 
-	if (makeGpgMessage(msg, border2->str) < 0) {
+	if (makeGpgMessage(msg, buf, border2->str) < 0) {
 		dsbDestroy(buf);
 		return NULL;
 	}
@@ -407,14 +409,12 @@ createPlainEmail(dstrbuf *msg)
 	dstrbuf *border=NULL;
 	dstrbuf *buf=DSB_NEW;
 
-	assert(file != NULL);
-
 	if (Mopts.attach) {
 		border = mimeMakeBoundary();
 	}
 
-	printHeaders(border, buf);
-	if (makeMessage(buf, border->str) < 0) {
+	printHeaders(border->str, buf);
+	if (makeMessage(msg, buf, border->str) < 0) {
 		dsbDestroy(buf);
 		buf=NULL;
 	}
@@ -451,7 +451,7 @@ createMail(void)
 				fprintf(stderr, "Subject: ");
 				fgets(subject, sizeof(subject)-1, stdin);
 				chomp(subject);
-				Mopts.subject = add_subject;
+				Mopts.subject = subject;
 			}
 
 			/* Now we need to let them create a file */
@@ -477,7 +477,7 @@ createMail(void)
 
 	if (!msg2) {
 		fatal("Could not create email properly");
-		proper_exit(ERROR);
+		properExit(ERROR);
 	}
 
 	/* Now let's send the message */

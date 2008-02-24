@@ -8,6 +8,7 @@ AC_CONFIG_HEADER([include/config.h])
 
 version="@ver@"
 date="@date@"
+cwd=`pwd`
 
 # Checks for programs.
 AC_PROG_CC
@@ -25,6 +26,7 @@ fi
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(m, sqrt)
 AC_CHECK_LIB(nsl, gethostbyname)
+AC_CHECK_LIB(ssl, SSL_library_init)
 
 echo $LIBS
 
@@ -61,8 +63,8 @@ fi
 AC_SUBST(docdir, ["\${prefix}/doc/email-${version}"])
 AC_SUBST(ver, ["$version"])
 
-CFLAGS="$CFLAGS -I$cwd -I$cwd/src -I$cwd/include -I../include"
-CFLAGS="$CFLAGS -DEMAIL_VERSION='\"$version\"' -DCOMPILE_DATE='\"$date\"'"
+CFLAGS="$CFLAGS -I$cwd -I$cwd/src -I$cwd/include -I../include -I$cwd/dlib/include"
+CFLAGS="$CFLAGS -I../dlib/include -DEMAIL_VERSION='\"$version\"' -DCOMPILE_DATE='\"$date\"'"
 CFLAGS="$CFLAGS -DEMAIL_DIR='\"${sysconfdir}/email\"'"
 
 AC_CONFIG_FILES([Makefile

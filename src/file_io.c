@@ -50,8 +50,6 @@ readInput(void)
 	dstrbuf *buf=DSB_NEW;
 	char *sig_file = NULL;
 
-	assert(filename != NULL);
-
 	while (!feof(stdin)) {
 		dsbReadline(buf, stdin);
 	}
@@ -181,7 +179,7 @@ editEmail(void)
 			properExit(EASY);
 		}
 	}
-	buf = geFileContents(filename);
+	buf = getFileContents(filename);
 
 	/* If they specified a signature file, let's append it */
 	sig_file = getConfValue("SIGNATURE_FILE");

@@ -45,7 +45,7 @@ defaultDestr(void *ptr)
 {
 	xfree(ptr);
 }
-	
+
 static struct option Gopts[] = {
 	{"attach", 1, 0, 'a'},
 	{"attachment", 1, 0, 'a'},
@@ -133,7 +133,7 @@ moduleUsage(const char *module)
 
 	if (!(help = fopen(help_file->str, "r"))) {
 		fatal("Could not open help file: %s", help_file);
-		proper_exit(ERROR);
+		properExit(ERROR);
 	}
 	dsbDestroy(help_file);
 

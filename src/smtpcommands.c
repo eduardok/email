@@ -1,82 +1,40 @@
-/**
-
-    eMail is a command line SMTP client.
-
-    Copyright (C) 2001 - 2004 email by Dean Jones
-    Software supplied and written by http://www.cleancode.org
-
-    This file is part of eMail.
-
-    eMail is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    eMail is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with eMail; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-**/
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 
+#include <sys/select.h>
+
+#include "dnet.h"
+#include "dstrbuf.h"
 #include "email.h"
-#include "ipfunc.h"
-
-#include "smtpcommands.h"
-#include "utils.h"
-#include "progress_bar.h"
 #include "mimeutils.h"
-#include "error.h"
 
-static char error_string[MINBUF + 1];
-
-static void set_smtp_error(char *);
-static int readresponse(SOCKET *, char *, size_t);
-static int writeresponse(SOCKET *, char *, ...);
-static int helo(SOCKET *, const char *);
-static int ehlo(SOCKET *, const char *);
-static int mailfrom(SOCKET *, const char *);
-static int rcpt(SOCKET *, char *);
-static int data(SOCKET *);
-static int send_data(SOCKET *, FILE *);
-static int quit(SOCKET *);
-static int rset(SOCKET *);
-static int smtp_auth_login(SOCKET *, const char *, const char *);
-static int smtp_auth_plain(SOCKET *, const char *, const char *);
+static dstrbuf *errorstr;
 
 /**
  * Will generate a string from an error code and return
  * that string as a return value.
-**/
-
+ */
 char *
-smtp_errstring(void)
+smtpGetErr(void)
 {
-    return (error_string);
+	return errorstr->str;
 }
 
 /**
  * Simple interface to copy over buffer into error string
-**/
-
+ */
 static void
-set_smtp_error(char *buf)
+smtpSetErr(const char *buf)
 {
-    memset(error_string, '\0', sizeof(error_string));
-    memcpy(error_string, buf, sizeof(error_string));
+	if (!errorstr) {
+		errorstr = DSB_NEW;
+	}
+	dsbClear(errorstr);
+	dsbCopy(errorstr, buf);
 }
 
 /**
@@ -85,659 +43,712 @@ set_smtp_error(char *buf)
  * in the line is found to be a space.    Per the RFC 821 this means
  * that this will be the last line of response from the SMTP server
  * and the appropirate return value response.
-**/
+ */
+static int
+readResponse(dsocket *sd, dstrbuf *buf)
+{
+	int retval=ERROR;
+	dstrbuf *tmpbuf = DSB_NEW;
+	struct timeval tv;
+	fd_set rfds;
+
+	FD_ZERO(&rfds);
+	FD_SET(sd->sock, &rfds);
+	tv.tv_sec = 10;
+	tv.tv_usec = 0;
+	(void) select(sd->sock+1, &rfds, NULL, NULL, &tv);
+	if (FD_ISSET(sd->sock, &rfds)) {
+		do {
+			dsbClear(tmpbuf);
+			dnetReadline(sd, tmpbuf);
+			if (dnetErr(sd) || dnetEof(sd)) {
+				smtpSetErr("Lost connection with SMTP server");
+				retval = ERROR;
+				break;
+			}
+			dsbCat(buf, tmpbuf->str);
+			retval = SUCCESS;
+		/* The last line of a response has a space in the 4th column */
+		} while (tmpbuf->str[3] != ' ');
+	} else {
+		smtpSetErr("Timeout(10) while trying to read from SMTP server");
+		retval = ERROR;
+	}
+
+	if (retval != ERROR) {
+		retval = atoi(tmpbuf->str);
+	}
+
+	dsbDestroy(tmpbuf);
+	return retval;
+}
 
 static int
-readresponse(SOCKET * sd, char *buf, size_t size)
+writeResponse(dsocket *sd, char *line, ...)
 {
-    int retval;
-    char val[5] = { 0 };
+	va_list vp;
+	int sval, size=MAXBUF, bytes=0;
+	struct timeval tv;
+	fd_set wfds;
+	char *buf = xmalloc(size+1);
 
-    do {
-        sgets(buf, size, sd);
-        if (serror(sd) || seof(sd)) {
-            set_smtp_error("Lost connection with SMTP server");
-            return (ERROR);
-        }
+	while (true) {
+		va_start(vp, line);
+		bytes = vsnprintf(buf, size, line, vp);
+		va_end(vp);
+		if (bytes > -1 && bytes < size) {
+			/* String written properly */
+			break;
+		}
+		
+		if (bytes > -1) {
+			size += 1;
+		} else { 
+			size *= 2;
+		}
+		buf = xrealloc(buf, size+1);
+	}
 
-        memcpy(val, buf, 4);
 
-    } while (val[3] != ' ');
-    /* The last line of a response has a space in the 4th column */
-
-    retval = atoi(val);
-    return (retval);
+	FD_ZERO(&wfds);
+	FD_SET(sd->sock, &wfds);
+	tv.tv_sec = 10;
+	tv.tv_usec = 0;
+	sval = select(sd->sock+1, NULL, &wfds, NULL, &tv);
+	if (sval == -1) {
+		smtpSetErr("writeResponse: select error");
+		bytes = ERROR;
+	} else if (sval) {
+		dnetWrite(sd, buf, bytes);
+		if (dnetErr(sd)) {
+			smtpSetErr(dnetGetErr(sd));
+			bytes = ERROR;
+		}
+	} else {
+		smtpSetErr("Timeout(10) trying to write to SMTP server.");
+		bytes = ERROR;
+	}
+	xfree(buf);
+	return bytes;
 }
 
 static int
-writeresponse(SOCKET * sd, char *line, ...)
+helo(dsocket *sd, const char *domain)
 {
-    va_list vp;
-    char buf[MINBUF] = { 0 };
+	int retval;
+	dstrbuf *rbuf = DSB_NEW;
 
-    va_start(vp, line);
-    vsnprintf(buf, MINBUF - 1, line, vp);
-    va_end(vp);
+	/*
+	 * We will be calling this function after ehlo() has already
+	 * been called.  Since ehlo() already grabs the header, go
+	 * straight into sending the HELO
+	 */
+	if (writeResponse(sd, "HELO %s\r\n", domain) < 0) {
+		smtpSetErr("Lost connection to SMTP server");
+		retval = ERROR;
+		goto end;
+	}
 
-    sputs(buf, sd);
-    if (serror(sd))
-        return (-1);
+#ifdef DEBUG_SMTP
+	printf("<-- HELO\n");
+	fflush(stdout);
+#endif
 
-    return (0);
-}
+	retval = readResponse(sd, rbuf);
+	if (retval != 250) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		goto end;
+	}
 
-/**
- * Initializes the SMTP communications with SMTP_AUTH.
-**/
+#ifdef DEBUG_SMTP
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
+#endif
 
-int
-init_smtp_auth(SOCKET * sd, const char *auth, const char *user, const char *pass)
-{
-    if (strcasecmp(auth, "LOGIN") == 0) {
-        if (smtp_auth_login(sd, user, pass) == ERROR)
-            return (ERROR);
-    }
-    else if (strcasecmp(auth, "PLAIN") == 0) {
-        if (smtp_auth_plain(sd, user, pass) == ERROR)
-            return (ERROR);
-    }
-    else {
-        warning("SMTP_AUTH was invalid.  Trying AUTH type of LOGIN...");
-        if (smtp_auth_login(sd, user, pass) == ERROR)
-            return (ERROR);
-    }
-
-    return (0);
-}
-
-
-/**
- * Initializes the SMTP communications by sending the EHLO
- * command.    If EHLO fails, it will send HELO.    It will then
- * send the MAIL FROM: command.
-**/
-
-int
-init_smtp(SOCKET * sd, const char *domain)
-{
-    int retval;
-
-    retval = ehlo(sd, domain);
-    if (retval == ERROR) {
-        /* Per RFC, can ignore RSET, if error. */
-        rset(sd);
-        retval = helo(sd, domain);
-        if (retval == ERROR)
-            return (ERROR);
-    }
-
-    return (0);
-}
-
-/**
- * Sets who the message is from.  Basically runs the 
- * MAIL FROM: SMTP command
-**/
-
-int
-set_smtp_mail_from(SOCKET * sd, const char *from_email)
-{
-    int retval;
-
-    retval = mailfrom(sd, from_email);
-    if (retval == ERROR)
-        return (ERROR);
-
-    return (0);
-}
-
-/**
- * Sets all the recipients with the RCPT command
- * to the smtp server.
-**/
-
-int
-set_smtp_recipients(SOCKET * sd, list_t to, list_t cc, list_t bcc)
-{
-    int retval;
-    list_t next = NULL;
-    list_t saved = NULL;
-
-    next = list_getnext(to, &saved);
-    while (next) {
-        retval = rcpt(sd, next->b_data);
-        if (retval == ERROR)
-            return (ERROR);
-        next = list_getnext(NULL, &saved);
-    }
-
-    next = list_getnext(cc, &saved);
-    while (next) {
-        retval = rcpt(sd, next->b_data);
-        if (retval == ERROR)
-            return (ERROR);
-        next = list_getnext(NULL, &saved);
-    }
-
-    next = list_getnext(bcc, &saved);
-    while (next) {
-        retval = rcpt(sd, next->b_data);
-        if (retval == ERROR)
-            return (ERROR);
-        next = list_getnext(NULL, &saved);
-    }
-
-    return (0);
-}
-
-/**
- * Sends all the data to the smtp server
-**/
-
-int
-send_smtp_data(SOCKET * sd, FILE * email)
-{
-    int retval;
-
-    retval = data(sd);
-    if (retval == ERROR)
-        return (ERROR);
-
-    rewind(email);
-    retval = send_data(sd, email);
-    if (retval == ERROR)
-        return (ERROR);
-
-    return (0);
-}
-
-/**
- * Sends the QUIT\r\n signal to the smtp server and
- * closes the link.
-**/
-
-int
-close_smtp_connection(SOCKET * sd)
-{
-    int retval;
-
-    retval = quit(sd);
-    if (retval == ERROR)
-        return (ERROR);
-
-    return (0);
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 
 static int
-helo(SOCKET * sd, const char *domain)
+ehlo(dsocket *sd, const char *domain)
 {
-    int retval;
-    char rbuf[MINBUF] = { 0 };
+	int retval;
+	dstrbuf *rbuf = DSB_NEW;
 
-    if (!quiet) {
-        printf("\rCommunicating with SMTP server...");
-        fflush(stdout);
-    }
-
-    /**
-     * We will be calling this function after ehlo() has already
-     * been called.  Since ehlo() already grabs the header, go
-     * straight into sending the HELO
-    **/
-    if (writeresponse(sd, "HELO %s\r\n", domain) < 0) {
-        set_smtp_error("Lost connection to SMTP server");
-        return (ERROR);
-    }
+	/* This initiates the connection, so let's read the header first */
+	retval = readResponse(sd, rbuf);
+	if (retval != 220) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("<-- HELO\n");
-    fflush(stdout);
+	printf("\r\n--> %s", rbuf->str);
+	fflush(stdout);
 #endif
 
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 250)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	if (writeResponse(sd, "EHLO %s\r\n", domain) < 0) {
+		smtpSetErr("Lost connection to SMTP server");
+		retval = ERROR;
+		goto end;
+	}
+	//retval = readResponse(sd, rbuf);
+	//printf("readResponse: %s\n", rbuf->str);
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("\r\n<-- EHLO %s\r\n", domain);
+	fflush(stdout);
 #endif
 
-    return (retval);
-}
-
-
-static int
-ehlo(SOCKET * sd, const char *domain)
-{
-    int retval;
-    char rbuf[MINBUF] = { 0 };
-
-    if (!quiet) {
-        printf("\rCommunicating with SMTP server...");
-        fflush(stdout);
-    }
-
-    /* This initiates the connection, so let's read the header first */
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 220)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	retval = readResponse(sd, rbuf);
+	if (retval != 250) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("\r\n--> %s", rbuf);
-    fflush(stdout);
+	printf("\r\n--> %s", rbuf->str);
+	fflush(stdout);
 #endif
 
-    if (writeresponse(sd, "EHLO %s\r\n", domain) < 0) {
-        set_smtp_error("Lost connection to SMTP server");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("\r\n<-- EHLO %s\r\n", domain);
-    fflush(stdout);
-#endif
-
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 250)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("\r\n--> %s", rbuf);
-    fflush(stdout);
-#endif
-
-    return (retval);
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 /** 
  * Send the MAIL FROM: command to the smtp server 
-**/
-
+ */
 static int
-mailfrom(SOCKET * sd, const char *email)
+mailFrom(dsocket *sd, const char *email)
 {
-    int retval = 0;
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *rbuf = DSB_NEW;
 
-    /* Create the MAIL FROM: command */
-    if (writeresponse(sd, "MAIL FROM:<%s>\r\n", email) < 0) {
-        set_smtp_error("Lost connection with SMTP server");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("\r\n<-- MAIL FROM:<%s>\r\n", email);
-#endif
-
-    /* read return message and let's return it's code */
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 250)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	/* Create the MAIL FROM: command */
+	if (writeResponse(sd, "MAIL FROM:<%s>\r\n", email) < 0) {
+		smtpSetErr("Lost connection with SMTP server");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("\r\n--> %s", rbuf);
+	printf("\r\n<-- MAIL FROM:<%s>\r\n", email);
 #endif
 
-    return (retval);
+	/* read return message and let's return it's code */
+	retval = readResponse(sd, rbuf);
+	if (retval != 250) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("\r\n--> %s", rbuf->str);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 /**
  * Send the RCPT TO: command to the smtp server
-**/
-
+ */
 static int
-rcpt(SOCKET * sd, char *email)
+rcpt(dsocket *sd, const char *email)
 {
-    int retval = 0;
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *rbuf = DSB_NEW;
 
-    /* Create the RCPT TO: command    and send it */
-    if (writeresponse(sd, "RCPT TO:<%s>\r\n", email) < 0) {
-        set_smtp_error("Lost connection with SMTP server");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("\r\n<-- RCPT TO:<%s>\r\n", email);
-    fflush(stdout);
-#endif
-
-    /* Read return message and let's return it's code */
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || ((retval != 250) && (retval != 251))) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	if (writeResponse(sd, "RCPT TO: <%s>\r\n", email) < 0) {
+		smtpSetErr("Lost connection with SMTP server");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("\r\n--> %s", rbuf);
-    fflush(stdout);
+	printf("\r\n<-- RCPT TO: <%s>\r\n", email);
+	fflush(stdout);
 #endif
 
-    return (retval);
+	/* Read return message and let's return it's code */
+	retval = readResponse(sd, rbuf);
+	if ((retval != 250) && (retval != 251)) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("\r\n--> %s", rbuf->str);
+	fflush(stdout);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
-/** 
- * Send the DATA command to the smtp server ( no data, just the command )
-**/
-
-static int
-data(SOCKET * sd)
-{
-    int retval = 0;
-    char rbuf[MINBUF] = { 0 };
-
-    if (!quiet) {
-        printf("\rSending DATA...                    ");
-        fflush(stdout);
-    }
-
-    /* Create the DATA command and send it */
-    if (writeresponse(sd, "DATA\r\n") < 0) {
-        set_smtp_error("Lost connection with SMTP server");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("\r\n<-- DATA\r\n");
-#endif
-
-    /* Read return message and let's return it's code */
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 354)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("--> %s", rbuf);
-#endif
-
-    return (retval);
-}
-
-/**
- * Send the data from a open file to the smtp server 
-**/
-
-static int
-send_data(SOCKET * sd, FILE * message)
-{
-    int retval = 0;
-    char rbuf[100] = { 0 };
-    char sbuf[100] = { 0 };
-    struct prbar *pb;
-
-    assert(message != NULL);
-    assert(sd != NULL);
-
-    /* start up our progress bar */
-    pb = prbar_init(message);
-
-    /* Let's go in a loop to get the data from the file and spit it out to sock */
-    while (!feof(message) && !ferror(message)) {
-        int count;
-
-        count = fread(rbuf, 1, sizeof(rbuf) - 1, message);
-        if (count > 0) {
-            if (ssend(rbuf, count, sd) < 0) {
-                set_smtp_error(socket_get_error(sd));
-                return (ERROR);
-            }
-
-            if (!quiet && pb != NULL)
-                prbar_print(count, pb);
-            memset(rbuf, 0, count);
-        }
-
-    }
-
-    if (ferror(message)) {
-        set_smtp_error("Error reading email file. Can't continue sending email");
-        return (ERROR);
-    }
-
-    if (writeresponse(sd, "\r\n.\r\n") < 0) {
-        set_smtp_error("Lost Connection with SMTP server: Send_data()");
-        return (ERROR);
-    }
-
-    retval = readresponse(sd, sbuf, sizeof(sbuf) - 1);
-    if ((retval == ERROR) || (retval != 250)) {
-        if (retval != ERROR)
-            set_smtp_error(sbuf);
-
-        return (ERROR);
-    }
-
-    prbar_destroy(pb);
-    return (retval);
-}
 
 /**
  * Send the QUIT command
-**/
-
+ */
 static int
-quit(SOCKET * sd)
+quit(dsocket *sd)
 {
-    int retval = 0;
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *rbuf = DSB_NEW;
 
-    /* Create QUIT command and send it */
-    if (writeresponse(sd, "QUIT\r\n") < 0) {
-        set_smtp_error("Lost Connection with SMTP server: Quit()");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("<-- QUIT\r\n");
-#endif
-
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 221)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	/* Create QUIT command and send it */
+	if (writeResponse(sd, "QUIT\r\n") < 0) {
+		smtpSetErr("Lost Connection with SMTP server: Quit()");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s", rbuf);
+	printf("<-- QUIT\r\n");
 #endif
 
-    return (retval);
+	retval = readResponse(sd, rbuf);
+	if (retval != 221) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("--> %s", rbuf->str);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
+}
+
+int
+data(dsocket *sd)
+{
+	int retval = 0;
+	dstrbuf *rbuf = DSB_NEW;
+
+	/* Create the DATA command and send it */
+	if (writeResponse(sd, "DATA\r\n") < 0) {
+		smtpSetErr("Lost connection with SMTP server");
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("\r\n<-- DATA\r\n");
+#endif
+
+	/* Read return message and let's return it's code */
+	retval = readResponse(sd, rbuf);
+	if (retval != 354) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("--> %s", rbuf->str);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 /**
  * Send the RSET command. 
-**/
-
+ */
 static int
-rset(SOCKET * sd)
+rset(dsocket *sd)
 {
-    int retval = 0;
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *rbuf = DSB_NEW;
 
-    /* Send the RSET command */
-    if (writeresponse(sd, "RSET\r\n") < 0) {
-        set_smtp_error("Socket write error: rset");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("<-- RSET\n");
-    fflush(stdout);
-#endif
-
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 250)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
-
+	/* Send the RSET command */
+	if (writeResponse(sd, "RSET\r\n") < 0) {
+		smtpSetErr("Socket write error: rset");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("<-- RSET\n");
+	fflush(stdout);
 #endif
 
-    return (retval);
+	retval = readResponse(sd, rbuf);
+	if (retval != 250) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+
+#ifdef DEBUG_SMTP
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 
 /** 
  * SMTP AUTH login.
-**/
-
+ */
 static int
-smtp_auth_login(SOCKET * sd, const char *user, const char *pass)
+smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 {
-    int retval = 0;
-    char data[MINBUF] = { 0 };
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *data;
+	dstrbuf *rbuf = DSB_NEW;
 
-    mime_b64_encode_string(user, strlen(user), data, sizeof(data));
-    if (writeresponse(sd, "AUTH LOGIN %s\r\n", data) < 0) {
-        set_smtp_error("Socket write error: smtp_auth_login");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("<-- AUTH LOGIN\n");
-    fflush(stdout);
-#endif
-
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 334)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	data = mimeB64EncodeString((u_char *)user, strlen(user));
+	if (writeResponse(sd, "AUTH LOGIN %s\r\n", data->str) < 0) {
+		smtpSetErr("Socket write error: smtp_auth_login");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("<-- AUTH LOGIN\n");
+	fflush(stdout);
 #endif
 
-    /* Encode the password */
-    memset(data, '\0', sizeof(data));
-    mime_b64_encode_string(pass, strlen(pass), data, sizeof(data));
-    if (writeresponse(sd, "%s\r\n", data) < 0) {
-        set_smtp_error("Socket write error: smtp_auth_login");
-        return (ERROR);
-    }
+	retval = readResponse(sd, rbuf);
+	if (retval != 334) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("<-- %s\n", data);
-    fflush(stdout);
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
 #endif
 
-    /* Read back "OK" from server */
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 235)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	/* Encode the password */
+	dsbDestroy(data);
+	data = mimeB64EncodeString((u_char *)pass, strlen(pass));
+	if (writeResponse(sd, "%s\r\n", data->str) < 0) {
+		smtpSetErr("Socket write error: smtp_auth_login");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("<-- %s\n", data->str);
+	fflush(stdout);
 #endif
 
-    return (0);
+	/* Read back "OK" from server */
+	retval = readResponse(sd, rbuf);
+	if (retval != 235) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
+
+#ifdef DEBUG_SMTP
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
+#endif
+
+end:
+	dsbDestroy(rbuf);
+	return retval;
 }
 
 static int
-smtp_auth_plain(SOCKET * sd, const char *user, const char *pass)
+smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 {
-    int retval = 0;
-    int uplen = 0;
-    char *up;
-    char data[MINBUF] = { 0 };
-    char rbuf[MINBUF] = { 0 };
+	int retval = 0;
+	dstrbuf *data=NULL;
+	dstrbuf *up = DSB_NEW;
+	dstrbuf *rbuf = DSB_NEW;
 
-    if (writeresponse(sd, "AUTH PLAIN\r\n") < 0) {
-        set_smtp_error("Socket write error: smtp_auth_plain");
-        return (ERROR);
-    }
-
-#ifdef DEBUG_SMTP
-    printf("<-- AUTH PLAIN\n");
-    fflush(stdout);
-#endif
-
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 334)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        return (ERROR);
-    }
+	if (writeResponse(sd, "AUTH PLAIN\r\n") < 0) {
+		smtpSetErr("Socket write error: smtp_auth_plain");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("<-- AUTH PLAIN\n");
+	fflush(stdout);
 #endif
 
-    uplen = strlen(user) + strlen(pass) + 3;
-    up = xmalloc(uplen);
-    snprintf(up, uplen, "%c%s%c%s", '\0', user, '\0', pass);
-    mime_b64_encode_string(up, uplen, data, sizeof(data));
-
-    if (writeresponse(sd, "%s\r\n", data) < 0) {
-        set_smtp_error("Socket write error: smtp_auth_plain");
-        free(up);
-        return (ERROR);
-    }
+	retval = readResponse(sd, rbuf);
+	if (retval != 334) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("<-- %s\n", data);
-    fflush(stdout);
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
 #endif
 
-    retval = readresponse(sd, rbuf, sizeof(rbuf) - 1);
-    if ((retval == ERROR) || (retval != 235)) {
-        if (retval != ERROR)
-            set_smtp_error(rbuf);
-
-        free(up);
-        return (ERROR);
-    }
+	dsbPrintf(up, "%c%s%c%s", '\0', user, '\0', pass);
+	data = mimeB64EncodeString((u_char *)up->str, up->len);
+	if (writeResponse(sd, "%s\r\n", data->str) < 0) {
+		smtpSetErr("Socket write error: smtp_auth_plain");
+		retval = ERROR;
+		goto end;
+	}
 
 #ifdef DEBUG_SMTP
-    printf("--> %s\n", rbuf);
-    fflush(stdout);
+	printf("<-- %s\n", data->str);
+	fflush(stdout);
 #endif
 
+	dsbDestroy(data);
+	retval = readResponse(sd, rbuf);
+	if (retval != 235) {
+		if (retval != ERROR) {
+			smtpSetErr(rbuf->str);
+		}
+		retval = ERROR;
+		goto end;
+	}
 
-    free(up);
-    return (0);
+#ifdef DEBUG_SMTP
+	printf("--> %s\n", rbuf->str);
+	fflush(stdout);
+#endif
+
+end:
+	dsbDestroy(up);
+	dsbDestroy(data);
+	dsbDestroy(rbuf);
+	return retval;
 }
+
+/**
+ * Initializes the SMTP communications with SMTP_AUTH.
+ *
+ * Params
+ * 	sd - Socket descriptor
+ * 	auth - LOGIN or PLAIN 
+ * 	user - Username of the SMTP server
+ * 	pass - Password for the Username
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpInitAuth(dsocket *sd, const char *auth, const char *user, const char *pass)
+{
+	int retval=ERROR;
+	if (strcasecmp(auth, "LOGIN") == 0) {
+		retval = smtpAuthLogin(sd, user, pass);
+	} else if (strcasecmp(auth, "PLAIN") == 0) {
+		retval = smtpAuthPlain(sd, user, pass);
+	} 
+
+	return retval;
+}
+
+
+/**
+ * Initializes the SMTP communications by sending the EHLO
+ * If EHLO errors out, it will try the HELO command.
+ *
+ * Params
+ * 	sd - Socket descriptor
+ * 	domain - Your domain name.
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpInit(dsocket *sd, const char *domain)
+{
+	int retval;
+
+	retval = ehlo(sd, domain);
+	if (retval == ERROR) {
+		/*
+		 * Per RFC, if ehlo error's out, you can
+		 * ignore the error, RSET and try a 
+		 * regular helo.
+		 */
+		rset(sd);
+		retval = helo(sd, domain);
+	}
+
+	return retval;
+}
+
+/**
+ * Sets who the message is from.  Basically runs the 
+ * MAIL FROM: SMTP command
+ *
+ * Params
+ * 	sd - Socket descriptor
+ * 	email - From Email
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpSetMailFrom(dsocket *sd, const char *email)
+{
+	return mailFrom(sd, email);
+}
+
+/**
+ * Sets all the recipients with the RCPT command
+ * to the smtp server. Multiple calls to this function
+ * are expected if you have multiple To, CC and BCC 
+ * recipients.
+ *
+ * Params
+ * 	sd - Socket descriptor
+ * 	to - An e-mail address to send the message to
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpSetRcpt(dsocket *sd, const char *to)
+{
+	return rcpt(sd, to);
+}
+
+/** 
+ * Send the DATA command to the smtp server (no data, just the command)
+ *
+ * Params
+ * 	sd - Socket descriptor
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpStartData(dsocket *sd)
+{
+	return data(sd);
+}
+
+/**
+ * Sends data to the smtp server. You can try and send the
+ * whole chunk at once, or it may be a better idea to break
+ * up the data into smaller chunks.
+ *
+ * Params
+ * 	sd - Socket descriptor
+ * 	data - A chunk of data.
+ * 	len - The length of the data to send
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpSendData(dsocket *sd, const char *data, size_t len)
+{
+	int retval = SUCCESS;
+
+	assert(data != NULL);
+	assert(sd != NULL);
+
+	/* Write the data to the socket. */
+	dnetWrite(sd, data, len);
+	if (dnetErr(sd)) {
+		smtpSetErr("Error writing to socket.");
+		retval = ERROR;
+	}
+	return retval;
+}
+
+/**
+ * Let's the SMTP server know it's the end of the data stream.
+ *
+ * Params
+ * 	sd - Socket descriptor
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int 
+smtpEndData(dsocket *sd)
+{
+	int retval=ERROR;
+	dstrbuf *rbuf = DSB_NEW;
+
+	if (writeResponse(sd, "\r\n.\r\n") != ERROR) {
+		retval = readResponse(sd, rbuf);
+		if (retval != 250) {
+			if (retval != ERROR) {
+				smtpSetErr(rbuf->str);
+				retval = ERROR;
+			}
+		}
+	} else {
+		smtpSetErr("Lost Connection with SMTP server: smtpEndData()");
+		retval = ERROR;
+	}
+
+	dsbDestroy(rbuf);
+	return retval;
+}
+
+/**
+ * Sends the QUIT\r\n signal to the smtp server.
+ *
+ * Params
+ * 	sd - Socket Descriptor
+ *
+ * Return
+ * 	- ERROR
+ * 	- SUCCESS
+ */
+int
+smtpQuit(dsocket *sd)
+{
+    return quit(sd);
+}
+
+

@@ -80,7 +80,6 @@ truncateSubject(const char *message, struct prbar *bar)
 struct prbar *
 prbarInit(size_t bytes)
 {
-	struct stat sb;
 	struct winsize win_size;
 	struct prbar *bar;
 
@@ -154,9 +153,6 @@ prbarPrint(size_t bytes, struct prbar *bar)
 	int curr_bar_size;
 
 	assert(bar != NULL);
-	if (bytes < 0) {
-		return;
-	}
 
 	/* Set our current display state */
 	bar->curr_size += bytes;

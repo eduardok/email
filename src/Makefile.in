@@ -14,7 +14,7 @@ mandir = @mandir@
 sysconfdir = @sysconfdir@
 
 FILES = email.o addr_parse.o addy_book.o conf.o error.o execgpg.o file_io.o \
-        ipfunc.o message.o mimeutils.o processmail.o progress_bar.o \
+        message.o mimeutils.o processmail.o progress_bar.o \
 	remotesmtp.o sig_file.o smtpcommands.o utils.o
 
 all: $(FILES)

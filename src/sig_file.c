@@ -174,7 +174,7 @@ appendFortune(dstrbuf *app)
 	putenv("PATH='/usr/bin:/usr/local/bin:/usr/games'");
 	if (!(fortune = popen("/usr/games/fortune", "r"))) {
 		warning("Could not exectute /usr/games/fortune");
-		fputs("Unspecified Fortune", app);
+		dsbPrintf(app, "Unspecified Fortune");
 		return;
 	}
 
@@ -200,7 +200,6 @@ appendSig(dstrbuf *app, const char *sigfile)
 {
 	FILE *sig;
 	int next_char;
-	char *sig_div = NULL;
 
 	if (!(sig = fopen(sigfile, "r"))) {
 		warning("Could not open signature file");
@@ -230,11 +229,11 @@ appendSig(dstrbuf *app, const char *sigfile)
 				appendFortune(app);
 				break;
 			default:
-				dsbnCat(app, &next_char, 1);
+				dsbnCat(app, (char *)&next_char, 1);
 				break;
 			}
 		} else {
-			dsbnCat(app, &next_char, 1);
+			dsbnCat(app, (char *)&next_char, 1);
 		}
 	}
 

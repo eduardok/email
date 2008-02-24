@@ -29,9 +29,11 @@
 
 dstrbuf *expandPath(const char *path);
 int copyfile(const char *from, const char *to);
-void deadLetter(dstring *msg);
+void deadLetter(dstrbuf *msg);
 dstrbuf *randomString(size_t size);
 dstrbuf *getFirstEmail(void);
 void properExit(int sig);
+void chomp(char *str);
+int copyUpTo(dstrbuf *buf, int stop, FILE *in);
 
 #endif /* __UTILS_H */

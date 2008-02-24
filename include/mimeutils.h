@@ -26,7 +26,7 @@
 dstrbuf *mimeMakeBoundary(void);
 dstrbuf *mimeFiletype(const char *filename);
 dstrbuf *mimeFilename(const char *in_name);
-int mimeQpEncodeFile(FILE *in, FILE *out);
+void mimeQpEncodeStr(dstrbuf *in, dstrbuf *out);
 int mimeB64EncodeFile(FILE *in, dstrbuf *out);
 dstrbuf *mimeB64EncodeString(const u_char *inbuf, size_t len);
 

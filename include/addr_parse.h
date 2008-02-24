@@ -24,8 +24,8 @@
 #ifndef ADDR_PARSE_H
 #define ADDR_PARSE_H  1
 
-void formatEmailAddr(char *, char *, char *, size_t);
-int validateEmail(const char *);
+dstrbuf *formatEmailAddr(char *name, char *email);
+int validateEmail(const char *email);
 
 #endif  /* ADDR_PARSE_H */
 
