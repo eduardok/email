@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,11 +19,11 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef SIG_FILE_H
 #define SIG_FILE_H  1
 
-int append_sig(FILE *, const char *);
+int appendSig(dstrbuf *msg, const char *sig_file);
 
 #endif /* SIG_FILE_H */
+

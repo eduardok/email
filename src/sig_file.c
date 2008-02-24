@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -50,39 +48,32 @@
 #include "error.h"
 
 
-static void append_time(FILE *);
-static void append_date(FILE *);
-static void append_ctime(FILE *);
-static void append_hostinfo(FILE *);
-static void append_fortune(FILE *);
-
 /**
  * will print the digital time of day in
  * file 'app'.  If localtime() (or gmtime()) fails at all, a default buffer
  * will be applied of 00:00:00 so that this function doesn't fail
 **/
-
 static void
-append_time(FILE * app)
+appendTime(dstrbuf *app)
 {
-    time_t tim;
-    struct tm *lt;
-    char tempbuf[MINBUF] = { 0 };
+	time_t tim;
+	struct tm *lt;
+	char tempbuf[MINBUF] = { 0 };
 
-    tim = time(NULL);
+	tim = time(NULL);
 
 #ifdef USE_GMT
-    lt = gmtime(&tim);
+	lt = gmtime(&tim);
 #else
-    lt = localtime(&tim);
+	lt = localtime(&tim);
 #endif
 
-    if (lt == NULL)
-        snprintf(tempbuf, MINBUF - 1, "00:00:00");
-    else
-        strftime(tempbuf, MINBUF - 1, "%I:%M:%S %p", lt);
-
-    fputs(tempbuf, app);
+	if (lt == NULL) {
+		snprintf(tempbuf, MINBUF - 1, "00:00:00");
+	} else {
+		strftime(tempbuf, MINBUF - 1, "%I:%M:%S %p", lt);
+	}
+	dsbPrintf(app, "%s", tempbuf);
 }
 
 /**
@@ -90,28 +81,26 @@ append_time(FILE * app)
  * in the file 'app'.  If localtime() fails (or gmtime()), it will apply a default
  * value of "00/00/00" so that this function does not fail.
 **/
-
 static void
-append_date(FILE * app)
+appendDate(dstrbuf *app)
 {
-    time_t tim;
-    struct tm *lt;
-    char tempbuf[MINBUF] = { 0 };
+	time_t tim;
+	struct tm *lt;
+	char tempbuf[MINBUF] = { 0 };
 
-    tim = time(NULL);
-
+	tim = time(NULL);
 #ifdef USE_GMT
-    lt = gmtime(&tim);
+	lt = gmtime(&tim);
 #else
-    lt = localtime(&tim);
+	lt = localtime(&tim);
 #endif
 
-    if (lt == NULL)
-        snprintf(tempbuf, MINBUF - 1, "00/00/00");
-    else
-        strftime(tempbuf, MINBUF - 1, "%m/%d/%Y", lt);
-
-    fputs(tempbuf, app);
+	if (lt == NULL) {
+		snprintf(tempbuf, MINBUF - 1, "00/00/00");
+	} else {
+		strftime(tempbuf, MINBUF - 1, "%m/%d/%Y", lt);
+	}
+	dsbPrintf(app, "%s", tempbuf);
 }
 
 /**
@@ -120,39 +109,36 @@ append_date(FILE * app)
  * in it's place.  If ctime() fails, a standard format of "Unspecified Date"
  * will be placed in the file.  This function will not fail.
 **/
-
 static void
-append_ctime(FILE * app)
+appendCtime(dstrbuf *app)
 {
-    time_t tim;
-    struct tm *lt;
-    char *ctimeval = NULL;
-    char tempbuf[MINBUF] = { 0 };
+	time_t tim;
+	struct tm *lt;
+	char *ctimeval = NULL;
+	char tempbuf[MINBUF] = { 0 };
 
-    tim = time(NULL);
-
+	tim = time(NULL);
 #ifdef USE_GMT
-    lt = gmtime(&tim);
+	lt = gmtime(&tim);
 #else
-    lt = localtime(&tim);
+	lt = localtime(&tim);
 #endif
 
-    if (lt == NULL) {
-        ctimeval = ctime(&tim);
-        if (!ctimeval)
-            snprintf(tempbuf, MINBUF - 1, "Unspecified Date");
-        else
-            snprintf(tempbuf, MINBUF - 1, "%s", ctimeval);
-    }
-    else {
+	if (lt == NULL) {
+		ctimeval = ctime(&tim);
+		if (!ctimeval) {
+			snprintf(tempbuf, MINBUF - 1, "Unspecified Date");
+		} else {
+			snprintf(tempbuf, MINBUF - 1, "%s", ctimeval);
+		}
+	} else {
 #ifdef USE_GNU_STRFTIME
-        strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %z", lt);
+		strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %z", lt);
 #else /* I don't believe anyone but glibc does the smaller %z */
-        strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %Z", lt);
+		strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %Z", lt);
 #endif
-    }
-
-    fputs(tempbuf, app);
+	}
+	dsbPrintf(app, "%s", tempbuf);
 }
 
 /**
@@ -160,16 +146,16 @@ append_ctime(FILE * app)
  * the file 'app'.  If uname() fails, a default value of "Unspecified Host"
  * will be appended to the file.  This function will not fail
 **/
-
 static void
-append_hostinfo(FILE * app)
+appendHostinfo(dstrbuf *app)
 {
-    struct utsname sys;
+	struct utsname sys;
 
-    if (uname(&sys) < 0)
-        fprintf(app, "Unspecified Host");
-    else
-        fprintf(app, "%s %s %s", sys.sysname, sys.release, sys.machine);
+	if (uname(&sys) < 0) {
+		dsbPrintf(app, "Unspecified Host");
+	} else {
+		dsbPrintf(app, "%s %s %s", sys.sysname, sys.release, sys.machine);
+	}
 }
 
 /**
@@ -177,33 +163,30 @@ append_hostinfo(FILE * app)
  * I will attempt to call putenv() to set IFS to a safe environment
  * setting.  You should have putenv() or configure would have failed
 **/
-
 static void
-append_fortune(FILE * app)
+appendFortune(dstrbuf *app)
 {
-    FILE *fortune;
-    char tempbuf[MINBUF] = { 0 };
+	FILE *fortune;
+	char tempbuf[MINBUF] = { 0 };
 
-    /* set IFS and PATH environment variable for security reasons */
-    putenv("IFS=' '");
-    putenv("PATH='/usr/bin:/usr/local/bin:/usr/games'");
-    if (!(fortune = popen("/usr/games/fortune", "r"))) {
-        warning("Could not exectute /usr/games/fortune");
-        fputs("Unspecified Fortune", app);
-        return;
-    }
+	/* set IFS and PATH environment variable for security reasons */
+	putenv("IFS=' '");
+	putenv("PATH='/usr/bin:/usr/local/bin:/usr/games'");
+	if (!(fortune = popen("/usr/games/fortune", "r"))) {
+		warning("Could not exectute /usr/games/fortune");
+		fputs("Unspecified Fortune", app);
+		return;
+	}
 
-    /*
-
-     * if we didn't return early from a failure to call
-     * then we should get the output from the fortune command
-     * and append it.
-     */
-
-    while (fgets(tempbuf, sizeof(tempbuf), fortune) != NULL)
-        fputs(tempbuf, app);
-
-    pclose(fortune);
+	/*
+	 * if we didn't return early from a failure to call
+	 * then we should get the output from the fortune command
+	 * and append it.
+	 */
+	while (fgets(tempbuf, sizeof(tempbuf), fortune) != NULL) {
+		dsbPrintf(app, tempbuf);
+	}
+	pclose(fortune);
 }
 
 
@@ -212,76 +195,59 @@ append_fortune(FILE * app)
  * account the wildcards allowed to be specified and transform 
  * them to the correct modules.
 **/
-
 int
-append_sig(FILE * app, const char *sigfile)
+appendSig(dstrbuf *app, const char *sigfile)
 {
-    FILE *sig;
-    int next_char;
-    char *sig_div = NULL;
+	FILE *sig;
+	int next_char;
+	char *sig_div = NULL;
 
-    sig_div = get_conf_value("SIGNATURE_DIVIDER");
-    if (!(sig = fopen(sigfile, "r"))) {
-        warning("Could not open signature file");
-        return (ERROR);
-    }
+	if (!(sig = fopen(sigfile, "r"))) {
+		warning("Could not open signature file");
+		return ERROR;
+	}
 
-    /* Now append the divider */
-    if (sig_div) {
-        /* If we want an html email */
-        if (Mopts.html)
-            fprintf(app, "<BR>%s<BR>\n", sig_div);
+	/* Loop through signature file pulling out the contents and fixing wildcards */
+	while ((next_char = fgetc(sig)) != EOF) {
+		if (next_char == '%') {
+			switch ((next_char = fgetc(sig))) {
+			case 't':
+				appendTime(app);
+				break;
+			case 'd':
+				appendDate(app);
+				break;
+			case 'v':
+				dsbPrintf(app, "%s", EMAIL_VERSION);
+				break;
+			case 'c':
+				appendCtime(app);
+				break;
+			case 'h':
+				appendHostinfo(app);
+				break;
+			case 'f':
+				appendFortune(app);
+				break;
+			default:
+				dsbnCat(app, &next_char, 1);
+				break;
+			}
+		} else {
+			dsbnCat(app, &next_char, 1);
+		}
+	}
 
-        else
-            fprintf(app, "%s\n", sig_div);
-    }
+	if (ferror(sig)) {
+		fclose(sig);
+		return ERROR;
+	}
 
-    /* Loop through signature file pulling out the contents and fixing wildcards */
-    while ((next_char = fgetc(sig)) != EOF) {
-        if (next_char == '%') {
-            switch ((next_char = fgetc(sig))) {
-                case 't':
-                    append_time(app);
-                    break;
-
-                case 'd':
-                    append_date(app);
-                    break;
-
-                case 'v':
-                    fputs(EMAIL_VERSION, app);
-                    break;
-
-                case 'c':
-                    append_ctime(app);
-                    break;
-
-                case 'h':
-                    append_hostinfo(app);
-                    break;
-
-                case 'f':
-                    append_fortune(app);
-                    break;
-
-                default:
-                    fputc(next_char, app);
-                    break;
-            }
-        }
-        else
-            fputc(next_char, app);
-    }
-
-    if (ferror(sig)) {
-        fclose(sig);
-        return (ERROR);
-    }
-
-    /* We have to append <BR> to our sig divider for HTML */
-    if (Mopts.html)
-        fprintf(app, "<BR>\n");
-
-    /* If no error, do not close file */
-    return (TRUE);
+	/* We have to append <BR> to our sig divider for HTML */
+	if (Mopts.html) {
+		dsbPrintf(app, "<BR>\n");
+	}
+	fclose(sig);
+	return SUCCESS;
 }
+

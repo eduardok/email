@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,26 +19,26 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef PROGRESS_H
 #define PROGRESS_H  1
 
 struct prbar {
-    short error;
-    short bar_size;
-    short percent;
-    int progress;
-    int truncated_file_size;
-    int actual_file_size;
-    int curr_size;
-    char *subject;
-    char *size_type;
-    char *buf;
+	short error;
+	short bar_size;
+	short percent;
+	int progress;
+	int truncated_file_size;
+	int actual_file_size;
+	int curr_size;
+	char *subject;
+	char *size_type;
+	char *buf;
 };
 
-struct prbar *prbar_init(FILE *);
-void prbar_print(int, struct prbar *);
-void prbar_destroy(struct prbar *);
+struct prbar *prbarInit(size_t bytes);
+void prbarPrint(size_t bytes, struct prbar *bar);
+void prbarDestroy(struct prbar *bar);
 
 #endif /* PROGRESS_H */
+

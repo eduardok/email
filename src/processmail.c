@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -33,7 +31,7 @@
 #include <sys/stat.h>
 
 #include "email.h"
-#include "ipfunc.h"
+#include "dsocket.h"
 #include "utils.h"
 #include "smtpcommands.h"
 #include "processmail.h"
@@ -45,73 +43,66 @@
  * will invoke the path specified to sendmail with any 
  * options specified and it will send the mail via sendmail...
 **/
-
 int
-process_internal(char *sm_bin, FILE * message)
+processInternal(const char *sm_bin, dstrbuf *msgcon)
 {
-    int bytes = 0;
-    char buf[MINBUF];
-    struct prbar *bar;
-    FILE *open_sendmail;
-    char path_to_sendmail[MINBUF];
+	int bytes = 0;
+	struct prbar *bar;
+	FILE *open_sendmail;
+	char *ptr = msgcon->str;
+	dstrbuf *smpath;
 
-    bar = prbar_init(message);
-    expand_path(path_to_sendmail, sm_bin, sizeof(path_to_sendmail));
+	bar = prbarInit(msgcon->len);
+	smpath = expandPath(sm_bin);
 
-    open_sendmail = popen(path_to_sendmail, "w");
-    if (!open_sendmail) {
-        fatal("Could not open internal sendmail path: %s", path_to_sendmail);
-        return (ERROR);
-    }
+	open_sendmail = popen(path_to_sendmail, "w");
+	if (!open_sendmail) {
+		fatal("Could not open internal sendmail path: %s", smpath->str);
+		return ERROR;
+	}
 
-    /* Make sure 'message' is at the top of the file */
-    fseek(message, SEEK_SET, 0);
+	/* Loop through getting what's out of message and sending it to sendmail */
+	while (*ptr != '\0') {
+		bytes = strlen(ptr);
+		if (bytes > 100) {
+			bytes = 100;
+		}
+		fwrite(ptr, sizeof(char), bytes, open_sendmail);
+		if (!quiet && bar != NULL) {
+			prbarPrint(bytes, bar);
+		}
+		ptr += bytes;
+	}
 
-    /* Loop through getting what's out of message and sending it to sendmail */
-    while (fgets(buf, sizeof(buf), message) != NULL) {
-        bytes = strlen(buf);
-        fputs(buf, open_sendmail);
-        if (!quiet && bar != NULL)
-            prbar_print(bytes, bar);
-    }
-
-    if (ferror(message))
-        return (ERROR);
-
-    fflush(open_sendmail);
-    fclose(open_sendmail);
-
-    prbar_destroy(bar);
-    return (TRUE);
+	fflush(open_sendmail);
+	fclose(open_sendmail);
+	prbarDestroy(bar);
+	return SUCCESS; 
 }
 
 /**
  * Prints a user friendly error message when we encounter and 
  * error with SMTP communications.
 **/
-
 static void
-print_smtp_error()
+printSmtpError()
 {
-    fprintf(stderr, "\n");
-    fatal("Smtp error: %s\n", smtp_errstring());
+	fprintf(stderr, "\n");
+	fatal("Smtp error: %s\n", smtpGetErr());
 }
 
 /**
  * Gets the users smtp password from the configuration file.
  * if it does not exist, it will prompt them for it.
 **/
-
 static char *
 get_smtp_pass(void)
 {
-    char *retval;
-
-    retval = get_conf_value("SMTP_AUTH_PASS");
-    if (!retval)
-        retval = getpass("Enter your SMTP Password: ");
-
-    return (retval);
+	char *retval = getConfValue("SMTP_AUTH_PASS");
+	if (!retval) {
+		retval = getpass("Enter your SMTP Password: ");
+	}
+	return retval;
 }
 
 /**
@@ -119,75 +110,114 @@ get_smtp_pass(void)
  * Remote SMTP server...
 **/
 int
-process_remote(const char *smtp_serv, int smtp_port, FILE * final_email)
+processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 {
-    SOCKET *sd;
-    int retval;
-    char *smtp_auth = NULL;
-    char *email_addr = NULL;
-    char *user = NULL;
-    char *pass = NULL;
-    char nodename[MINBUF] = { 0 };
+	dsocket *sd;
+	int retval;
+	char *smtp_auth = NULL;
+	char *email_addr = NULL;
+	char *user = NULL;
+	char *pass = NULL;
+	struct prbar *bar=NULL;
+	char nodename[MINBUF] = { 0 };
+	char *ptr = msg->str;
 
-    email_addr = get_conf_value("MY_EMAIL");
-    if (gethostname(nodename, sizeof(nodename) - 1) < 0)
-        snprintf(nodename, sizeof(nodename) - 1, "geek");
+	email_addr = getConfValue("MY_EMAIL");
+	if (gethostname(nodename, sizeof(nodename) - 1) < 0) {
+		snprintf(nodename, sizeof(nodename) - 1, "geek");
+	}
 
-    /* Get other possible configuration values */
-    smtp_auth = get_conf_value("SMTP_AUTH");
-    if (smtp_auth) {
-        user = get_conf_value("SMTP_AUTH_USER");
-        if (!user) {
-            fatal("You must set SMTP_AUTH_USER in order to user SMTP_AUTH\n");
-            return (ERROR);
-        }
+	/* Get other possible configuration values */
+	smtp_auth = getConfValue("SMTP_AUTH");
+	if (smtp_auth) {
+		user = getConfValue("SMTP_AUTH_USER");
+		if (!user) {
+			fatal("You must set SMTP_AUTH_USER in order to user SMTP_AUTH\n");
+			return ERROR;
+		}
+		pass = get_smtp_pass();
+		if (!pass) {
+			fatal("Failed to get SMTP Password.\n");
+			return ERROR;
+		}
+	}
 
-        pass = get_smtp_pass();
-        if (!pass) {
-            fatal("Failed to get SMTP Password.\n");
-            return (ERROR);
-        }
-    }
+	bar = prbarInit(msg->len);
+	sd = dnetConnect(smtp_serv, smtp_port);
+	if (sd == NULL) {
+		fatal("Could not connect to server: %s on port: %d", 
+			smtp_serv, smtp_port);
+		return ERROR;
+	}
 
-    sd = socket_connect(smtp_serv, smtp_port);
-    if (sd == NULL) {
-        fatal("Could not connect to server: %s on port: %d", smtp_serv, smtp_port);
-        return (ERROR);
-    }
+	/* Start SMTP Communications */
+	if (smtpInit(sd, nodename) == ERROR) {
+		printSmtpError();
+		goto end;
+	}
 
-    /* Start SMTP Communications */
-    if (init_smtp(sd, nodename) == ERROR) {
-        print_smtp_error();
-        return (ERROR);
-    }
+	/* See if we're using SMTP_AUTH. */
+	if (smtp_auth) {
+		retval = smtpInitAuth(sd, smtp_auth, user, pass);
+		if (retval == ERROR) {
+			printSmtpError();
+			goto end;
+		}
+	}
 
-    /* See if we're using SMTP_AUTH. */
-    if (smtp_auth) {
-        retval = init_smtp_auth(sd, smtp_auth, user, pass);
-        if (retval == ERROR) {
-            print_smtp_error();
-            return (ERROR);
-        }
-    }
+	retval = smtpSetMailFrom(sd, email_addr);
+	if (retval == ERROR) {
+		printSmtpError();
+		goto end;
+	}
 
-    retval = set_smtp_mail_from(sd, email_addr);
-    if (retval == ERROR) {
-        print_smtp_error();
-        return (ERROR);
-    }
+	while ((next = (struct addr *)dlGetNext(Mopts.to)) != NULL) {
+		retval = smtpSetRcpt(sd, next->email);
+		if (retval == ERROR) {
+			printSmtpError();
+			goto end;
+		}
+	}
+	while ((next = (struct addr *)dlGetNext(Mopts.cc)) != NULL) {
+		retval = smtpSetRcpt(sd, next->email);
+		if (retval == ERROR) {
+			printSmtpError();
+			goto end;
+		}
+	}
+	while ((next = (struct addr *)dlGetNext(Mopts.bcc)) != NULL) {
+		retval = smtpSetRcpt(sd, next->email);
+		if (retval == ERROR) {
+			printSmtpError();
+			goto end;
+		}
+	}
 
-    retval = set_smtp_recipients(sd, Mopts.to, Mopts.cc, Mopts.bcc);
-    if (retval == ERROR) {
-        print_smtp_error();
-        return (ERROR);
-    }
+	retval = smtpStartData(sd);
+	if (retval == ERROR) {
+		printSmtpError();
+		goto end;
+	}
+	while (*ptr != '\0') {
+		bytes = strlen(ptr);
+		if (bytes > 100) {
+			bytes = 100;
+		}
+		retval = smtpSendData(sd, ptr, bytes);
+		if (retval == ERROR) {
+			goto end;
+		}
+		if (!quiet && bar != NULL) {
+			prbarPrint(bytes, bar);
+		}
+		ptr += bytes;
+	}
+	smtpEndData(sd);
+	smtpQuit(sd);
 
-    retval = send_smtp_data(sd, final_email);
-    if (retval == ERROR) {
-        print_smtp_error();
-        return (ERROR);
-    }
-
-    socket_close(sd);
-    return (TRUE);
+end:
+	prbarDestroy(bar);
+	dnetClose(sd);
+	return TRUE;
 }
+
