@@ -42,7 +42,7 @@
 #define MAX_CONF_VARS 20
 
 /* There are the variables accepted in the configuration file */
-static char conf_vars[MAX_CONF_VARS][MINBUF] = {
+static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"SMTP_SERVER",
 	"SMTP_PORT",
 	"SENDMAIL_BIN",

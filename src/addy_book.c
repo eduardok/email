@@ -92,7 +92,7 @@ separate(char *string)
 		 * make sure that next isn't too large, if it is, don't store it
 		 * get next element and move on...
 		 */
-		if (strlen(next) > MINBUF) {
+		if (strlen(next) > MAXBUF) {
 			next = strtok(NULL, ",");
 			continue;
 		}

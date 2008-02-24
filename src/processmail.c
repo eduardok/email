@@ -120,7 +120,7 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 	char *user = NULL;
 	char *pass = NULL;
 	struct prbar *bar=NULL;
-	char nodename[MINBUF] = { 0 };
+	char nodename[MAXBUF] = { 0 };
 	char *ptr = msg->str;
 	struct addr *next=NULL;
 

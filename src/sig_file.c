@@ -58,7 +58,7 @@ appendTime(dstrbuf *app)
 {
 	time_t tim;
 	struct tm *lt;
-	char tempbuf[MINBUF] = { 0 };
+	char tempbuf[MAXBUF] = { 0 };
 
 	tim = time(NULL);
 
@@ -69,9 +69,9 @@ appendTime(dstrbuf *app)
 #endif
 
 	if (lt == NULL) {
-		snprintf(tempbuf, MINBUF - 1, "00:00:00");
+		snprintf(tempbuf, MAXBUF - 1, "00:00:00");
 	} else {
-		strftime(tempbuf, MINBUF - 1, "%I:%M:%S %p", lt);
+		strftime(tempbuf, MAXBUF - 1, "%I:%M:%S %p", lt);
 	}
 	dsbPrintf(app, "%s", tempbuf);
 }
@@ -86,7 +86,7 @@ appendDate(dstrbuf *app)
 {
 	time_t tim;
 	struct tm *lt;
-	char tempbuf[MINBUF] = { 0 };
+	char tempbuf[MAXBUF] = { 0 };
 
 	tim = time(NULL);
 #ifdef USE_GMT
@@ -96,9 +96,9 @@ appendDate(dstrbuf *app)
 #endif
 
 	if (lt == NULL) {
-		snprintf(tempbuf, MINBUF - 1, "00/00/00");
+		snprintf(tempbuf, MAXBUF - 1, "00/00/00");
 	} else {
-		strftime(tempbuf, MINBUF - 1, "%m/%d/%Y", lt);
+		strftime(tempbuf, MAXBUF - 1, "%m/%d/%Y", lt);
 	}
 	dsbPrintf(app, "%s", tempbuf);
 }
@@ -115,7 +115,7 @@ appendCtime(dstrbuf *app)
 	time_t tim;
 	struct tm *lt;
 	char *ctimeval = NULL;
-	char tempbuf[MINBUF] = { 0 };
+	char tempbuf[MAXBUF] = { 0 };
 
 	tim = time(NULL);
 #ifdef USE_GMT
@@ -127,15 +127,15 @@ appendCtime(dstrbuf *app)
 	if (lt == NULL) {
 		ctimeval = ctime(&tim);
 		if (!ctimeval) {
-			snprintf(tempbuf, MINBUF - 1, "Unspecified Date");
+			snprintf(tempbuf, MAXBUF - 1, "Unspecified Date");
 		} else {
-			snprintf(tempbuf, MINBUF - 1, "%s", ctimeval);
+			snprintf(tempbuf, MAXBUF - 1, "%s", ctimeval);
 		}
 	} else {
 #ifdef USE_GNU_STRFTIME
-		strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %z", lt);
+		strftime(tempbuf, MAXBUF - 1, "%a, %d %b %Y %H:%M:%S %z", lt);
 #else /* I don't believe anyone but glibc does the smaller %z */
-		strftime(tempbuf, MINBUF - 1, "%a, %d %b %Y %H:%M:%S %Z", lt);
+		strftime(tempbuf, MAXBUF - 1, "%a, %d %b %Y %H:%M:%S %Z", lt);
 #endif
 	}
 	dsbPrintf(app, "%s", tempbuf);
@@ -167,7 +167,7 @@ static void
 appendFortune(dstrbuf *app)
 {
 	FILE *fortune;
-	char tempbuf[MINBUF] = { 0 };
+	char tempbuf[MAXBUF] = { 0 };
 
 	/* set IFS and PATH environment variable for security reasons */
 	putenv("IFS=' '");
