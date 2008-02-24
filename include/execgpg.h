@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,13 +19,12 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef __EXECGPG_H
 #define __EXECGPG_H  1
 
-FILE *call_gpg_sig(const char *, const char *);
-FILE *call_gpg_enc(const char *, const char *);
-FILE *call_gpg_encsig(const char *, const char *);
+typedef enum { GPG_SIG, GPG_ENC, GPG_ENC_SIG } GpgCallType;
+
+dstrbuf *callGpg(dstrbuf *infile, GpgCallType call_type);
 
 #endif /* EXECGPG_H */

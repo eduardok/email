@@ -40,8 +40,6 @@
 #include "error.h"
 #include "mimeutils.h"
 
-static void moduleUsage(const char *);
-
 static void
 defaultDestr(void *ptr)
 {
@@ -79,6 +77,108 @@ static struct option Gopts[] = {
 	{"header", 1, 0, 'H'},
 	{"to-name", 1, 0, 5}
 };
+
+/**
+ * Usage prints helpful usage information,
+**/
+void
+usage(void)
+{
+	fprintf(stderr,
+	    "Options information is as follows\n"
+	    "email [options] recipient1,recipient2,...\n\n"
+	    "    -h, -help module          Print this message or specify one of the "
+	    "below options\n"
+	    "    -q, -quiet                Suppress displayed messages (Good for cron)\n"
+	    "    -f, -from-addr            Senders mail address\n"
+	    "    -n, -from-name            Senders name\n"
+	    "    -b, -blank-mail           Allows you to send a blank email\n"
+	    "    -e, -encrypt              Encrypt the e-mail for first recipient before "
+	    "sending\n"
+	    "    -s, -subject subject      Subject of message\n"
+	    "    -r, -smtp-server server   Specify a temporary SMTP server for sending\n"
+	    "    -p, -smtp-port port       Specify the SMTP port to connect to\n"
+	    "    -a, -attach file,...      Attach N binary files and base64 encode\n"
+	    "    -c, -conf-file file       Path to non-default configuration file\n"
+	    "    -t, -check-config         Simply parse the email.conf file for errors\n"
+	    "        -cc email,email,...   Copy recipients\n"
+	    "        -bcc email,email,...  Blind Copy recipients\n"
+	    "        -sign                 Sign the email with GPG\n"
+	    "        -html                 Send message in HTML format "
+	    "( Make your own HTML! )\n"
+	    "    -m, -smtp-auth type       Set the SMTP AUTH type (plain or login)\n"
+	    "    -u, -smtp-user username   Specify your username for SMTP AUTH\n"
+	    "    -i, -smtp-pass password   Specify your password for SMTP AUTH\n"
+	    "    -g, -gpg-pass             Specify your password for GPG\n"
+	    "    -H, -header string        Add header (can be used multiple times)\n"
+	    "        -high-priority        Send the email with high priority\n");
+
+	exit(EXIT_SUCCESS);
+}
+
+/**
+ * ModuleUsage will take an argument for the specified 
+ * module and print out help information on the topic.  
+ * information is stored in a written file in the location 
+ * in Macro EMAIL_DIR. and also specified with EMAIL_HELP_FILE
+ */
+static void
+moduleUsage(const char *module)
+{
+	FILE *help=NULL;
+	short found=0;
+	char *moduleptr=NULL;
+	dstrbuf *buf = DSB_NEW;
+	dstrbuf *help_file = expandPath(EMAIL_HELP_FILE);
+
+	if (!(help = fopen(help_file->str, "r"))) {
+		fatal("Could not open help file: %s", help_file);
+		proper_exit(ERROR);
+	}
+	dsbDestroy(help_file);
+
+	while (!feof(help)) {
+		dsbReadline(buf, help);
+		if ((buf->str[0] == '#') || (buf->str[0] == '\n')) {
+			continue;
+		}
+
+		chomp(buf->str);
+		moduleptr = strtok(buf->str, "|");
+		if (strcasecmp(moduleptr, module) != 0) {
+			while ((moduleptr = strtok(NULL, "|")) != NULL) {
+				if (strcasecmp(moduleptr, module) == 0) {
+					found = 1;
+					break;
+				}
+			}
+		} else {
+			found = 1;
+		}
+
+		if (!found) {
+			continue;
+		}
+		while (!feof(help)) {
+			dsbReadline(buf, help);
+			if (!strcmp(buf->str, "EOH\n")) {
+				break;
+			}
+			printf("%s", buf->str);
+		}
+		break;
+	}
+
+	if (feof(help)) {
+		printf("There is no help in the module: %s\n", module);
+		usage();
+	}
+
+	dsbDestroy(buf);
+	fclose(help);
+	exit(0);
+}
+
 
 int
 main(int argc, char **argv)
@@ -234,107 +334,5 @@ main(int argc, char **argv)
 
 	/* We never get here, but gcc will whine if i don't return something */
 	return 0;
-}
-
-/**
- * Usage prints helpful usage information,
-**/
-void
-usage(void)
-{
-	fprintf(stderr,
-	    "Options information is as follows\n"
-	    "email [options] recipient1,recipient2,...\n\n"
-	    "    -h, -help module          Print this message or specify one of the "
-	    "below options\n"
-	    "    -q, -quiet                Suppress displayed messages (Good for cron)\n"
-	    "    -f, -from-addr            Senders mail address\n"
-	    "    -n, -from-name            Senders name\n"
-	    "    -b, -blank-mail           Allows you to send a blank email\n"
-	    "    -e, -encrypt              Encrypt the e-mail for first recipient before "
-	    "sending\n"
-	    "    -s, -subject subject      Subject of message\n"
-	    "    -r, -smtp-server server   Specify a temporary SMTP server for sending\n"
-	    "    -p, -smtp-port port       Specify the SMTP port to connect to\n"
-	    "    -a, -attach file,...      Attach N binary files and base64 encode\n"
-	    "    -c, -conf-file file       Path to non-default configuration file\n"
-	    "    -t, -check-config         Simply parse the email.conf file for errors\n"
-	    "        -cc email,email,...   Copy recipients\n"
-	    "        -bcc email,email,...  Blind Copy recipients\n"
-	    "        -sign                 Sign the email with GPG\n"
-	    "        -html                 Send message in HTML format "
-	    "( Make your own HTML! )\n"
-	    "    -m, -smtp-auth type       Set the SMTP AUTH type (plain or login)\n"
-	    "    -u, -smtp-user username   Specify your username for SMTP AUTH\n"
-	    "    -i, -smtp-pass password   Specify your password for SMTP AUTH\n"
-	    "    -g, -gpg-pass             Specify your password for GPG\n"
-	    "    -H, -header string        Add header (can be used multiple times)\n"
-	    "        -high-priority        Send the email with high priority\n");
-
-	exit(EXIT_SUCCESS);
-}
-
-/**
- * ModuleUsage will take an argument for the specified 
- * module and print out help information on the topic.  
- * information is stored in a written file in the location 
- * in Macro EMAIL_DIR. and also specified with EMAIL_HELP_FILE
-**/
-
-static void
-moduleUsage(const char *module)
-{
-	FILE *help=NULL;
-	short found=0;
-	char *moduleptr=NULL;
-	dstrbuf *buf = DSB_NEW;
-	dstrbuf *help_file = expandPath(EMAIL_HELP_FILE);
-
-	if (!(help = fopen(help_file->str, "r"))) {
-		fatal("Could not open help file: %s", help_file);
-		proper_exit(ERROR);
-	}
-	dsbDestroy(help_file);
-
-	while (!feof(help)) {
-		dsbReadline(buf, help);
-		if ((buf->str[0] == '#') || (buf->str[0] == '\n')) {
-			continue;
-		}
-
-		chomp(buf->str);
-		moduleptr = strtok(buf->str, "|");
-		if (strcasecmp(moduleptr, module) != 0) {
-			while ((moduleptr = strtok(NULL, "|")) != NULL) {
-				if (strcasecmp(moduleptr, module) == 0) {
-					found = 1;
-					break;
-				}
-			}
-		} else {
-			found = 1;
-		}
-
-		if (!found) {
-			continue;
-		}
-		while (!feof(help)) {
-			dsbReadline(buf, help);
-			if (!strcmp(buf->str, "EOH\n")) {
-				break;
-			}
-			printf("%s", buf->str);
-		}
-		break;
-	}
-
-	if (feof(help)) {
-		printf("There is no help in the module: %s\n", module);
-		usage();
-	}
-
-	dsbDestroy(buf);
-	fclose(help);
-	exit(0);
 }
 

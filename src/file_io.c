@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -41,49 +39,32 @@
 #include "sig_file.h"
 #include "error.h"
 
-static int open_editor(const char *, const char *);
-static int question(const char *);
-
 /**
  * ReadInput: This function just reads in a file from STDIN which 
  * allows someone to redirect a file into email from the command line.
 **/
-
-int
-read_input(const char *filename)
+dstrbuf *
+readInput(void)
 {
-    FILE *out;
-    char filepath[MINBUF] = { 0 };
-    char buf[MINBUF] = { 0 };
-    char *sig_file = NULL;
+	dstrbuf *fpath=NULL;
+	dstrbuf *buf=DSB_NEW;
+	char *sig_file = NULL;
 
-    assert(filename != NULL);
+	assert(filename != NULL);
 
-    sig_file = get_conf_value("SIGNATURE_FILE");
-    if (!(out = fopen(filename, "w+"))) {
-        fatal("Could not open file temporary file");
-        return (ERROR);
-    }
+	while (!feof(stdin)) {
+		dsbReadline(buf, stdin);
+	}
 
-    while (fgets(buf, sizeof(buf), stdin) != NULL)
-        fprintf(out, "%s", buf);
+	/* If they specified a signature file, let's append it */
+	sig_file = getConfValue("SIGNATURE_FILE");
+	if (sig_file) {
+		fpath = expandPath(sig_file);
+		appendSig(buf, fpath->str);
+		dsbDestroy(fpath);
+	}
 
-    if (ferror(stdin)) {
-        fclose(out);
-        return (ERROR);
-    }
-
-    /* If they specified a signature file, let's append it */
-    if (sig_file) {
-        expand_path(filepath, sig_file, MINBUF);
-
-        /* Now that we know we have an absolute file path to the signature file... */
-        append_sig(out, filepath);
-    }
-
-    fflush(out);
-    fclose(out);
-    return (TRUE);
+	return buf;
 }
 
 /**
@@ -92,110 +73,124 @@ read_input(const char *filename)
  * and loop until it gets that answer.  It will return
  * TRUE for 'yes', FALSE for 'no'
 **/
-
-static int
+static bool
 question(const char *question)
 {
-    char yorn[5] = { 0 };
+	bool resp;
+	char yorn[5] = { 0 };
 
-    for (;;) {
-        printf("%s[y/n]: ", question);
-        fgets(yorn, sizeof(yorn), stdin);
-        chomp(yorn);
-        if ((strcasecmp(yorn, "no") == 0) || (strcasecmp(yorn, "n") == 0))
-            return (FALSE);
-        else if ((strcasecmp(yorn, "yes") == 0) || (strcasecmp(yorn, "y") == 0))
-            break;
-        else {
-            printf("Invalid Response!\n");
-            continue;
-        }
-    }
-
-    return (TRUE);
+	for (;;) {
+		printf("%s[y/n]: ", question);
+		fgets(yorn, sizeof(yorn), stdin);
+		chomp(yorn);
+		if ((strcasecmp(yorn, "no") == 0) || (strcasecmp(yorn, "n") == 0)) {
+			resp = false;
+			break;
+		} else if ((strcasecmp(yorn, "yes") == 0) || 
+			(strcasecmp(yorn, "y") == 0)) {
+			resp = true;
+			break;
+		} else {
+			printf("Invalid Response!\n");
+			continue;
+		}
+	}
+	return resp;
 }
 
 /**
  * Will for and execute the program that is passed to it.
  * will return -1 if an error occurred.
 **/
-
 static int
-open_editor(const char *editor, const char *filename)
+openEditor(const char *editor, const char *filename)
 {
-    int retval, status;
+	int retval, status;
 
-    assert(filename != NULL);
+	assert(filename != NULL);
 
-    retval = fork();
-    if (retval == 0) {          /* Child process */
-        if (execlp(editor, editor, filename, NULL) < 0)
-            exit(-1);
-    }
-    else if (retval > 0) {      /* Parent process */
-        while (waitpid(retval, &status, 0) < 0);        /* Empty loop */
-    }
-    else                        /* Error occured */
-        return (-1);
+	retval = fork();
+	if (retval == 0) {          /* Child process */
+		if (execlp(editor, editor, filename, NULL) < 0)
+			exit(-1);
+	} else if (retval > 0) {      /* Parent process */
+		while (waitpid(retval, &status, 0) < 0)
+			;
+	} else  {	/* Error */
+		return -1;
+	}
 
-    if (WIFEXITED(status) != 0) {
-        if (WEXITSTATUS(status) != 0)
-            return (-1);
-    }
-
-    return (0);
+	if (WIFEXITED(status) != 0) {
+		if (WEXITSTATUS(status) != 0) {
+			return -1;
+		}
+	}
+	return 0;
 }
+
+static dstrbuf *
+getFileContents(const char *file)
+{
+	dstrbuf *buf=NULL;
+	FILE *in = fopen(file, "r");
+	size_t fsize=filesize(file);
+
+	if (!in) {
+		return NULL;
+	}
+	buf = DSB_NEW;
+	if (dsbFread(buf, fsize, in) != fsize) {
+		dsbDestroy(buf);
+		buf=NULL;
+	}
+	fclose(in);
+	return buf;
+}
+
 
 /**
  * EditFile: this function basicly opens the editor of choice 
  * with a temp file and lets you create your message and send it.  
 **/
-
-int
-edit_file(const char *filename)
+dstrbuf *
+editEmail(void)
 {
-    char *editor;
-    char *sig_file = NULL;
-    char absolute_filepath[MINBUF];
-    FILE *out = NULL;
-    struct stat sb;
+	char *editor;
+	char *sig_file = NULL;
+	dstrbuf *fpath=NULL;
+	dstrbuf *buf=NULL;
+	size_t fsize=0;
+	char filename[TMP_MAX]={0};
 
-    assert(filename != NULL);
+	assert(filename != NULL);
 
-    sig_file = get_conf_value("SIGNATURE_FILE");
-    memset(&sb, 0, sizeof(sb));
+	if (!(editor = getenv("EDITOR"))) {
+		warning("Environment varaible EDITOR not set: Defaulting to \"vi\"\n");
+		editor = "vi";
+	}
 
-    if (!(editor = getenv("EDITOR"))) {
-        warning("Environment varaible EDITOR not set: Defaulting to \"vi\"\n");
-        editor = "vi";
-    }
+	tmpnam(filename);
+	if (openEditor(editor, filename) < 0) {
+		warning("Error when trying to open editor '%s'", editor);
+	}
 
-    if (open_editor(editor, filename) < 0)
-        warning("Error when trying to open editor '%s'", editor);
+	/* if they quit their editor without makeing an email... */
+	fsize = filesize(filename);
+	if (fsize <= 0) {
+		if (question("You have an empty email, send anyway?") == false) {
+			properExit(EASY);
+		}
+	}
+	buf = geFileContents(filename);
 
-    /* if they quit their editor without makeing an email... */
-    /* st_size will be 0 if stat failed and if file was not modified */
-    stat(filename, &sb);
-    if (sb.st_size <= 0) {
-        if (question("You have an empty email, send anyway?") == FALSE)
-            proper_exit(EASY);
-    }
+	/* If they specified a signature file, let's append it */
+	sig_file = getConfValue("SIGNATURE_FILE");
+	if (sig_file) {
+		fpath = expandPath(sig_file);
+		appendSig(buf, fpath->str);
+		dsbDestroy(fpath);
+	}
 
-    /* If they specified a signature file, let's append it */
-    if (sig_file) {
-        if (!(out = fopen(filename, "a"))) {
-            fatal("Can not open file just created");
-            return (ERROR);
-        }
-
-        expand_path(absolute_filepath, sig_file, MINBUF);
-
-        /* Now that we know we have an absoulte file path to the signature file... */
-        append_sig(out, absolute_filepath);
-
-        fflush(out);
-        fclose(out);
-    }
-
-    return (TRUE);
+	return buf;
 }
+

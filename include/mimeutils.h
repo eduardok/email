@@ -23,11 +23,11 @@
 #ifndef _MIMEUTILS_H
 #define _MIMEUTILS_H  1
 
-char *mimeMakeBoundary(char *buf, size_t size);
+dstrbuf *mimeMakeBoundary(void);
 dstrbuf *mimeFiletype(const char *filename);
-const char *mimeFilename(const char *in_name);
+dstrbuf *mimeFilename(const char *in_name);
 int mimeQpEncodeFile(FILE *in, FILE *out);
-int mimeB64EncodeFile(FILE *in, FILE *out);
+int mimeB64EncodeFile(FILE *in, dstrbuf *out);
 dstrbuf *mimeB64EncodeString(const u_char *inbuf, size_t len);
 
 #endif /* _MIMEUTILS_H */

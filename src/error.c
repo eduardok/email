@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -39,42 +37,41 @@
  * run perror for an in depth explination of the error, 
  * and elso call Exit(ERROR)
 **/
-
 void
 fatal(const char *message, ...)
 {
-    int tmp_error = errno;
-    va_list vp;
+	int tmp_error = errno;
+	va_list vp;
 
-    va_start(vp, message);
-    fprintf(stderr, "email: FATAL: ");
-    vfprintf(stderr, message, vp);
+	va_start(vp, message);
+	fprintf(stderr, "email: FATAL: ");
+	vfprintf(stderr, message, vp);
 
-    /* if message has a \n mark, don't call perror */
-    if (message[strlen(message) - 1] != '\n')
-        fprintf(stderr, ": %s\n", strerror(tmp_error));
-
-    va_end(vp);
+	/* if message has a \n mark, don't call perror */
+	if (strchr(message, '\n') != NULL) {
+		fprintf(stderr, ": %s\n", strerror(tmp_error));
+	}
+	va_end(vp);
 }
 
 /**
  * Warning will just warn with the specified warning message 
  * and then return from the function not exiting the system.
 **/
-
 void
 warning(const char *message, ...)
 {
-    int tmp_error = errno;
-    va_list vp;
+	int tmp_error = errno;
+	va_list vp;
 
-    va_start(vp, message);
-    fprintf(stderr, "email: WARNING: ");
-    vfprintf(stderr, message, vp);
+	va_start(vp, message);
+	fprintf(stderr, "email: WARNING: ");
+	vfprintf(stderr, message, vp);
 
-    /* if message has a \n mark, don't call perror */
-    if (message[strlen(message) - 1] != '\n')
-        fprintf(stderr, ": %s\n", strerror(tmp_error));
-
-    va_end(vp);
+	/* if message has a \n mark, don't call perror */
+	if (strchr(message, '\n') == NULL) {
+		fprintf(stderr, ": %s\n", strerror(tmp_error));
+	}
+	va_end(vp);
 }
+

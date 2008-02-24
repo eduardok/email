@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -21,12 +20,12 @@
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-**/  
+**/
 #ifndef ADDR_PARSE_H
 #define ADDR_PARSE_H  1
-void format_email_addr(char *, char *, char *, size_t);
-int validate_email(char *);
 
-
+void formatEmailAddr(char *, char *, char *, size_t);
+int validateEmail(const char *);
+
 #endif  /* ADDR_PARSE_H */
-    
+

@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,7 +19,6 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -44,174 +42,84 @@
  * Calls gpg with popen so that we may write to stdin 
  * to pass gpg the password provided.  
 **/
-
 static int
-execgpg(const char *command, char *passwd)
+execgpg(const char *command, char *passwd, const char *input)
 {
-    FILE *gpg_stdin = NULL;
+	FILE *gpg_stdin = NULL;
+	if (!passwd) {
+		passwd = getpass("Please enter your GPG password: ");
+	}
 
-    if (!passwd)
-        passwd = getpass("Please enter your GPG password: ");
+	gpg_stdin = popen(command, "r+");
+	if (!gpg_stdin) {
+		return ERROR;
+	}
 
-    gpg_stdin = popen(command, "w");
-    if (!gpg_stdin)
-        return (-1);
-
-    /* Push password to stdin */
-    fputs(passwd, gpg_stdin);
-    pclose(gpg_stdin);
-
-    return (0);
+	/* Push password to stdin */
+	fputs(passwd, gpg_stdin);
+	fputs(input, gpg_stdin);
+	pclose(gpg_stdin);
+	return 0;
 }
-
-/**
- * Calls gpg to sign the message 
- * returns an open FILE 
-**/
-
-FILE *
-call_gpg_sig(const char *infile, const char *outfile)
-{
-    int retval;
-    size_t size;
-    FILE *retfile;
-    char *command = NULL;
-    char *gpg_bin, *gpg_pass, *email_addr;
-    char gpg_path[MINBUF] = { 0 };
-
-    assert(infile != NULL);
-    assert(outfile != NULL);
-
-    gpg_bin = get_conf_value("GPG_BIN");
-    gpg_pass = get_conf_value("GPG_PASS");
-    email_addr = get_conf_value("MY_EMAIL");
-    if (!gpg_bin) {
-        fatal("You must specify the path to GPG in email.conf\n");
-        return (NULL);
-    }
-
-    expand_path(gpg_path, gpg_bin, sizeof(gpg_path));
-    size = strlen(gpg_path) + MINBUF;
-
-    command = xmalloc(size);
-    snprintf(command, size, "%s --armor -o '%s' --no-secmem-warning --passphrase-fd 0"
-             " --no-tty --digest-algo=SHA1 --sign --detach -u '%s' '%s'",
-             gpg_path, outfile, email_addr, infile);
-
-    /* Call gpg with our wrapper function */
-    retval = execgpg(command, gpg_pass);
-    free(command);
-
-    if (retval == -1) {
-        fatal("Error executing: %s", gpg_path);
-        return (NULL);
-    }
-
-    retfile = fopen(outfile, "r+");
-    return (retfile);
-}
-
 
 /**
  * Calls gpg to sign and encrypt message
  * returns and open FILE
 **/
-
-FILE *
-call_gpg_encsig(const char *infile, const char *outfile)
+dstrbuf *
+callGpg(dstrbuf *input, GpgCallType call_type)
 {
-    int retval;
-    size_t size;
-    FILE *retfile;
-    char *encto, *command;
-    char *gpg_bin, *gpg_pass;
-    char gpg_path[MINBUF] = { 0 };
+	int retval;
+	FILE *retfile;
+	char *encto;
+	char *gpg_bin, *gpg_pass;
+	char filename[TMP_MAX]={0};
+	dstrbuf *gpg=NULL;
+	dstrbuf *cmd=NULL;
+	dstrbuf *buf=NULL;
 
-    assert(infile != NULL);
-    assert(outfile != NULL);
+	gpg_bin = getConfValue("GPG_BIN");
+	gpg_pass = getConfValue("GPG_PASS");
+	if (!gpg_bin) {
+		fatal("You must specify the path to GPG in email.conf\n");
+		return NULL;
+	}
 
-    gpg_bin = get_conf_value("GPG_BIN");
-    gpg_pass = get_conf_value("GPG_PASS");
-    if (!gpg_bin) {
-        fatal("You must specify the path to GPG in email.conf\n");
-        return (NULL);
-    }
+	/* Get the first email from Mopts.to */
+	encto = getFirstEmail();
+	tmpnam(filename);
 
-    /* Get the first email from Mopts.to */
-    encto = getfirstemail();
-    size = strlen(gpg_path) + MINBUF;
+	gpg = expandPath(gpg_bin);
+	cmd = DSB_NEW;
+	dsbPrintf(cmd, "%s -a -o '%s' --no-secmem-warning --passphrase-fd 0 "
+		" --no-tty", gpg->str, filename);
+	if (call_type == GPG_SIG) {
+		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto);
+	} else if (call_type == GPG_ENC) {
+		dsbPrintf(cmd, " -a -r -e ");
+	} else {
+		dsbPrintf(cmd, " -r '%s' -s -e", encto);
+	}
+	retval = execgpg(cmd->str, gpg_pass);
 
-    expand_path(gpg_path, gpg_bin, sizeof(gpg_path) - 1);
-    command = xmalloc(size);
-    snprintf(command, size,
-             "%s -a -o '%s' --passphrase-fd 0 --no-tty -r '%s' -s -e '%s'",
-             gpg_path, outfile, encto, infile);
+	free(encto);
+	dsbDestroy(cmd);
 
-    retval = execgpg(command, gpg_pass);
+	if (retval == -1) {
+		fatal("Error executing: %s", gpg->str);
+		dsbDestroy(gpg);
+		return NULL;
+	}
 
-    free(encto);
-    free(command);
-    if (retval == -1) {
-        fatal("Error executing: %s", gpg_path);
-        return (NULL);
-    }
-
-    retfile = fopen(outfile, "r+");
-    return (retfile);
+	dsbDestroy(gpg);
+	retfile = fopen(filename, "r");
+	if (!retfile) {
+		fatal("Error executing: %s", gpg->str);
+		return NULL;
+	}
+	buf = DSB_NEW;
+	dsbFread(buf, filesize(filename), retfile);
+	fclose(retfile);
+	return buf;
 }
 
-/**
- * Calls gpg with execlp in a child fork().
- * returns an open encrypted FILE
-**/
-
-FILE *
-call_gpg_enc(const char *infile, const char *outfile)
-{
-    int status;
-    int retval, execval;
-    FILE *retfile;
-    char *encto, *gpg_bin;
-    char gpg_path[MINBUF] = { 0 };
-
-    assert(infile != NULL);
-    assert(outfile != NULL);
-
-    gpg_bin = get_conf_value("GPG_BIN");
-    if (!gpg_bin) {
-        fatal("You must specify the path to GPG in email.conf\n");
-        return (NULL);
-    }
-
-    /* Get the first email from Mopts.to */
-    encto = getfirstemail();
-    expand_path(gpg_path, gpg_bin, sizeof(gpg_path) - 1);
-
-    /* Fork and call gpg and store error code in shared memory */
-    retval = fork();
-    if (retval == 0) {          /* Child process */
-        execval = execlp(gpg_path, "gpg", "--no-tty", "-a", "-o",
-                         outfile, "-r", encto, "-e", infile, NULL);
-
-        /* If we get here, there was an issue! */
-        fatal("Error executing: %s", gpg_path);
-        _exit(execval);
-    }
-    else if (retval > 0) {      /* Parent process */
-        while (waitpid(retval, &status, 0) < 0);        /* Empty loop */
-    }
-    else {                      /* Error happened */
-
-        fatal("Could not fork()");
-        return (NULL);
-    }
-
-    /* Check if child exited with a code. */
-    if (WIFEXITED(status) != 0) {
-        if (WEXITSTATUS(status) != 0)
-            return (NULL);
-    }
-
-    retfile = fopen(outfile, "r+");
-    return (retfile);
-}

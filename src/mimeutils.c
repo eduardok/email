@@ -69,16 +69,19 @@ getMimeType(const char *str)
 /**
  * get the name of the file going to be attached from an absolute path 
 **/
-const char *
+dstrbuf *
 mimeFilename(const char *in_name)
 {
 	char *nameptr=NULL;
+	dstrbuf *ret = DSB_NEW;
 
 	nameptr = strrchr(in_name, '/');
 	if (nameptr) {
-		return ++nameptr;
+		dsbCopy(ret, ++nameptr);
+	} else {
+		dsbCopy(ret, in_name);
 	}
-	return in_name;
+	return ret;
 }
 
 /**
@@ -149,14 +152,12 @@ exit:
 /**
  * Makes a boundary for Mime emails 
 **/
-char *
-mimeMakeBoundary(char *buf, size_t size)
+dstrbuf *
+mimeMakeBoundary(void)
 {
-	char *tmp = buf;
-
-	strncpy(buf, "=-", size);
-	tmp += 2; /* get past the =- we just added */
-	randomString(tmp, size - 2);
+	dstrbuf *buf=DSB_NEW;
+	dstrbuf *rstr=randomString(15);
+	dsbPrintf(buf, "=-%s", rstr->str);
 	return buf;
 }
 
@@ -196,41 +197,36 @@ mimeB64EncodeBlock(const u_char in[3], u_char out[4], int len)
  * in file outfile including padding and EOL of \r\n properly
 **/
 int
-mimeB64EncodeFile(FILE *infile, FILE *outfile)
+mimeB64EncodeFile(FILE *infile, dstrbuf *outbuf)
 {
 	u_char in[3], out[4];
 	int i, len, blocksout = 0;
 
 	while (!feof(infile)) {
-	len = 0;
-	for (i = 0; i < 3; i++) {
-		in[i] = (u_char) getc(infile);
-		if (!feof(infile)) {
-			len++;
-		} else {
-			in[i] = 0;
+		len = 0;
+		for (i = 0; i < 3; i++) {
+			in[i] = (u_char) getc(infile);
+			if (!feof(infile)) {
+				len++;
+			} else {
+				in[i] = 0;
+			}
+		}
+		if (len) {
+			mimeB64EncodeBlock(in, out, len);
+			dsbnCat(outbuf, out, 4);
+			blocksout++;
+		}
+		if (blocksout >= (MAX_B64_LINE / 4) || feof(infile)) {
+			if (blocksout) {
+				dsbCat(outbuf, "\r\n");
+			}
+			blocksout = 0;
+		}
+		if (ferror(infile)) {
+			return -1;
 		}
 	}
-
-	if (len) {
-		mimeB64EncodeBlock(in, out, len);
-		for (i = 0; i < 4; i++) {
-			putc(out[i], outfile);
-		}
-		blocksout++;
-	}
-
-	if (blocksout >= (MAX_B64_LINE / 4) || feof(infile)) {
-		if (blocksout) {
-			fprintf(outfile, "\r\n");
-		}
-		blocksout = 0;
-	}
-
-	if (ferror(infile) || ferror(outfile))
-		return -1;
-	}
-
 	return 0;
 }
 

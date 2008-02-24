@@ -25,6 +25,6 @@
 #ifndef __SMTP_H
 #define __SMTP_H   1
 
-void create_mail(void);
+void createMail(void);
 
 #endif /* __SMTP_H */

@@ -26,6 +26,7 @@
 /* Everyone needs this */
 #include <assert.h>
 
+#include <dlib.h>
 #include <dlist.h>
 #include <dhash.h>
 

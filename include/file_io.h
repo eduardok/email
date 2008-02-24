@@ -1,8 +1,7 @@
 /**
-
     eMail is a command line SMTP client.
 
-    Copyright (C) 2001 - 2004 email by Dean Jones
+    Copyright (C) 2001 - 2008 email by Dean Jones
     Software supplied and written by http://www.cleancode.org
 
     This file is part of eMail.
@@ -20,12 +19,11 @@
     You should have received a copy of the GNU General Public License
     along with eMail; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 **/
 #ifndef FILE_IO_H
 #define FILE_IO_H   1
 
-int read_input(const char *);
-int edit_file(const char *);
+dstrbuf *readInput(void);
+dstrbuf *editFile(void);
 
 #endif /* FILE_IO_H */
