@@ -27,6 +27,8 @@ AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(m, sqrt)
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(ssl, SSL_library_init)
+AC_CHECK_LIB(crypto, X509_free)
+AC_CHECK_LIB(crypto, RAND_seed)
 
 echo $LIBS
 
