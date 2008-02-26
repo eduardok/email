@@ -48,7 +48,7 @@ fatal(const char *message, ...)
 	vfprintf(stderr, message, vp);
 
 	/* if message has a \n mark, don't call perror */
-	if (strchr(message, '\n') != NULL) {
+	if (strchr(message, '\n') == NULL) {
 		fprintf(stderr, ": %s\n", strerror(tmp_error));
 	}
 	va_end(vp);

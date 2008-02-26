@@ -198,8 +198,6 @@ ehlo(dsocket *sd, const char *domain)
 		retval = ERROR;
 		goto end;
 	}
-	//retval = readResponse(sd, rbuf);
-	//printf("readResponse: %s\n", rbuf->str);
 
 #ifdef DEBUG_SMTP
 	printf("\r\n<-- EHLO %s\r\n", domain);
@@ -470,6 +468,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	printf("<-- %s\n", data->str);
 	fflush(stdout);
 #endif
+	dsbDestroy(data);
 
 	/* Read back "OK" from server */
 	retval = readResponse(sd, rbuf);
@@ -748,7 +747,9 @@ smtpEndData(dsocket *sd)
 int
 smtpQuit(dsocket *sd)
 {
-    return quit(sd);
+	int retval=quit(sd);
+	dsbDestroy(errorstr);
+	return retval;
 }
 
 

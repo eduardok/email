@@ -58,6 +58,7 @@ struct addr {
 dhash table;
 char *conf_file;
 short quiet;
+dstrbuf *global_msg;
 
 struct mailer_options {
 	short html;

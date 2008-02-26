@@ -103,7 +103,6 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	}
 	retval = execgpg(cmd->str, gpg_pass, input->str);
 
-	free(encto);
 	dsbDestroy(cmd);
 	dsbDestroy(encto);
 

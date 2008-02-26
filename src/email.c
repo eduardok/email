@@ -98,7 +98,7 @@ usage(void)
 	    "    -s, -subject subject      Subject of message\n"
 	    "    -r, -smtp-server server   Specify a temporary SMTP server for sending\n"
 	    "    -p, -smtp-port port       Specify the SMTP port to connect to\n"
-	    "    -a, -attach file,...      Attach N binary files and base64 encode\n"
+	    "    -a, -attach file          Attach file and base64 encode\n"
 	    "    -c, -conf-file file       Path to non-default configuration file\n"
 	    "    -t, -check-config         Simply parse the email.conf file for errors\n"
 	    "        -cc email,email,...   Copy recipients\n"
@@ -132,7 +132,8 @@ moduleUsage(const char *module)
 	dstrbuf *help_file = expandPath(EMAIL_HELP_FILE);
 
 	if (!(help = fopen(help_file->str, "r"))) {
-		fatal("Could not open help file: %s", help_file);
+		fatal("Could not open help file: %s", help_file->str);
+		dsbDestroy(help_file);
 		properExit(ERROR);
 	}
 	dsbDestroy(help_file);
@@ -191,6 +192,7 @@ main(int argc, char **argv)
 
 	/* Set certian global options to NULL */
 	conf_file = NULL;
+	global_msg = NULL;
 	memset(&Mopts, 0, sizeof(struct mailer_options));
 
 	/* Check if they need help */

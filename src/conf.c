@@ -40,6 +40,7 @@
 #include "error.h"
 
 #define MAX_CONF_VARS 20
+#define MAX_DEP_CONF_VARS 1
 
 /* There are the variables accepted in the configuration file */
 static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
@@ -50,7 +51,6 @@ static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"MY_EMAIL",
 	"REPLY_TO",
 	"SIGNATURE_FILE",
-	"SIGNATURE_DIVIDER",
 	"ADDRESS_BOOK",
 	"SAVE_SENT_MAIL",
 	"TEMP_DIR",
@@ -59,6 +59,10 @@ static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"SMTP_AUTH",
 	"SMTP_AUTH_USER",
 	"SMTP_AUTH_PASS"
+};
+
+static char dep_conf_vars[MAX_DEP_CONF_VARS][MAXBUF] = {
+	"SIGNATURE_DIVIDER"
 };
 
 /**
@@ -72,6 +76,12 @@ checkVar(dstrbuf *var)
 
 	for (i = 0; i < MAX_CONF_VARS; i++) {
 		if (strcasecmp(var->str, conf_vars[i]) == 0) {
+			return 0;
+		}
+	}
+	for (i=0; i < MAX_DEP_CONF_VARS; i++) {
+		if (strcasecmp(var->str, dep_conf_vars[i]) == 0) {
+			warning("Deprecated variable: %s\n", var->str);
 			return 0;
 		}
 	}
@@ -93,7 +103,7 @@ hashit(const char *var, const char *val)
 		/* Something went wrong */
 		return ERROR;
 	}
-	setConfValue(var, val);
+	setConfValue(var, xstrdup(val));
 	return 0;
 }
 
@@ -105,7 +115,7 @@ hashit(const char *var, const char *val)
  * end of the expression if a \ is not found.
 **/
 int
-readConfig(FILE * in)
+readConfig(FILE *in)
 {
 	int ch, line=1;
 	int retval=0;
@@ -128,7 +138,7 @@ readConfig(FILE * in)
 				ch = fgetc(in);
 			}
 			if (ch != '\n') {
-				dsbnCopy(ptr, (char *)&ch, 1);
+				dsbnCat(ptr, (char *)&ch, 1);
 			}
 			line++;
 			/* If this char is a newline, 
@@ -173,7 +183,7 @@ readConfig(FILE * in)
 			/* Handle Newlines below */
 			break;
 		default:
-			dsbnCopy(ptr, (char *)&ch, 1);
+			dsbnCat(ptr, (char *)&ch, 1);
 			break;
 		}
 
@@ -260,6 +270,7 @@ getSystemEmail(void)
 	/* format it all */
 	dsbPrintf(buf, "%s@%s", name, host);
 	email = xstrdup(buf->str);
+	dsbDestroy(buf);
 	return email;
 }
 
@@ -274,9 +285,9 @@ openConfig(void)
 		dstrbuf *hconfig = expandPath("~/.email.conf");
 		config = fopen(hconfig->str, "r");
 		dsbDestroy(hconfig);
-	}
-	if (!config) {
-		config = fopen(MAIN_CONFIG, "r");
+		if (!config) {
+			config = fopen(MAIN_CONFIG, "r");
+		}
 	} else {
 		config = fopen(conf_file, "r");
 	}

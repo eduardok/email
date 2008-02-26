@@ -202,13 +202,13 @@ EOH
 
 attach|a|--attach|-attach|-a
 
---attach , -a file1,file2,file3
+--attach , -a file
 
   This option allows you to attach files to your email.
   It will encode your file with base64 and attach it with
   standard MIME headers for the encoded file.  You can 
-  specify multiple files delimited by commas or specify the
-  attach option multiple times.
+  specify multiple files by using the attach option 
+  multiple times.
   
 EOH
 

@@ -67,6 +67,17 @@ separateDestr(void *ptr)
 {
 	xfree(ptr);
 }
+
+static void
+addrDestr(void *ptr)
+{
+	struct addr *a = (struct addr *)ptr;
+	if (a) {
+		xfree(a->name);
+		xfree(a->email);
+		xfree(a);
+	}
+}
 	
 /** 
  * Seperate will take a string of command separated fields
@@ -170,7 +181,7 @@ getEntry(ENTRY *en, struct addr *ent, FILE *book)
 				ch = fgetc(book);
 			}
 			if (ch != '\n') {
-				dsbnCopy(ptr, (char *)&ch, 1);
+				dsbnCat(ptr, (char *)&ch, 1);
 			}
 			line++;
 			ch = 0;
@@ -214,7 +225,7 @@ getEntry(ENTRY *en, struct addr *ent, FILE *book)
 			/* Handle newlines below */
 			break;
 		default:
-			dsbnCopy(ptr, (char *)&ch, 1);
+			dsbnCat(ptr, (char *)&ch, 1);
 			break;
 		}
 
@@ -275,7 +286,7 @@ static void
 checkAndCopy(dlist to, dlist from)
 {
 	struct addr *next = NULL;
-	while ((next=dlGetNext(from)) != NULL) {
+	while ((next=(struct addr *)dlGetNext(from)) != NULL) {
 		insertEntry(to, next->name, next->email);
 	}
 }
@@ -310,7 +321,7 @@ checkAddrBook(dlist to, dlist from, FILE *book)
 		}
 		freeEntry(&en);
 	}
-	return 0;
+	return SUCCESS; 
 }
 
 /**
@@ -368,8 +379,8 @@ getNames(char *string)
 	FILE *book;
 	char *addr_book;
 	dlist tmp = NULL;
-	dlist ret_storage = NULL;
 	dstrbuf *bpath=NULL;
+	dlist ret = dlInit(addrDestr);
 
 	addr_book = getConfValue("ADDRESS_BOOK");
 
@@ -379,23 +390,22 @@ getNames(char *string)
 	}
 
 	if (!addr_book) {
-		checkAndCopy(ret_storage, tmp);
+		checkAndCopy(ret, tmp);
 	} else {
 		bpath = expandPath(addr_book);
 		book = fopen(bpath->str, "r");
+		dsbDestroy(bpath);
 		if (!book) {
 			fatal("Can't open address book: '%s'\n", bpath->str);
+			dlDestroy(ret);
+			dlDestroy(tmp);
 			return NULL;
 		}
-		if (checkAddrBook(ret_storage, tmp, book) == ERROR) {
-			dlDestroy(tmp);
-			dlDestroy(ret_storage);
-			return (NULL);
-		}
+		checkAddrBook(ret, tmp, book);
 		fclose(book);
 	}
 
 	dlDestroy(tmp);
-	return ret_storage;
+	return ret;
 }
 

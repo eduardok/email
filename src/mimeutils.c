@@ -102,8 +102,8 @@ mimeFiletype(const char *filename)
 	dstrbuf *buf=DSB_NEW;
 	dvector tmpvec=NULL, vec=NULL;
 	const char *ext=NULL;
-	FILE *file = fopen(MAGIC_FILE, "r");
 	dstrbuf *filen=NULL;
+	FILE *file = fopen(MAGIC_FILE, "r");
 
 	if (!file) {
 		goto exit;

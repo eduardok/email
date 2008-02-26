@@ -128,14 +128,13 @@ you'll never know it
 )
 
 .TP
-.B \-\-attach , \-a file1,file2,file3,...
+.B \-\-attach , \-a file
 Attach a binary file.  This option will allow you 
 to attach N files to your email and will be base64
 encoded upon delivery.  This option is helpful if
 you need to send any type of file that is not plain
 ascii text. This option can be used multiple times
-as well as in a comma delimited fashion to specify
-multiple files.
+to add multiple files to attach.
 
 .TP
 .B \-\-smtp-server , \-r server

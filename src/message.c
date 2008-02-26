@@ -411,6 +411,8 @@ createPlainEmail(dstrbuf *msg)
 
 	if (Mopts.attach) {
 		border = mimeMakeBoundary();
+	} else {
+		border = DSB_NEW;
 	}
 
 	printHeaders(border->str, buf);
@@ -419,7 +421,7 @@ createPlainEmail(dstrbuf *msg)
 		buf=NULL;
 	}
 	dsbDestroy(border);
-	return (buf);
+	return buf;
 }
 
 /**
@@ -430,7 +432,7 @@ createPlainEmail(dstrbuf *msg)
 void
 createMail(void)
 {
-	dstrbuf *msg=NULL, *msg2=NULL;
+	dstrbuf *msg=NULL;
 	char subject[MAXBUF]={0};
 
 	/**
@@ -467,22 +469,21 @@ createMail(void)
 
 	/* Create a message according to the type */
 	if (Mopts.encrypt) {
-		msg2 = createGpgEmail(msg, GPG_ENC);
+		global_msg = createGpgEmail(msg, GPG_ENC);
 	} else if (Mopts.sign) {
-		msg2 = createGpgEmail(msg, GPG_SIG);
+		global_msg = createGpgEmail(msg, GPG_SIG);
 	} else {
-		msg2 = createPlainEmail(msg);
+		global_msg = createPlainEmail(msg);
 	}
-	dsbDestroy(msg);
 
-	if (!msg2) {
+	if (!global_msg) {
 		fatal("Could not create email properly");
+		global_msg = DSB_NEW;
+		dsbCopy(global_msg, msg->str);
 		properExit(ERROR);
 	}
 
-	/* Now let's send the message */
-	if (sendmail(msg2) == ERROR) {
-		properExit(ERROR);
-	}
+	dsbDestroy(msg);
+	sendmail(global_msg);
 }
 

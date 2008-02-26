@@ -142,7 +142,7 @@ A:  Well, first thing you should do, is configure this email client.
     email -s "High priority email" -high-priority dean@somedomain.org
 
     Example: Send message with 2 attachements
-    email -s "here you go..." -attach file1,file2 dean@somedomain.org
+    email -s "here you go..." -attach file -attach file2 dean@somedomain.org
 
     Example: Add headers to the message
     email -s "New Message" --header "X-My-Header: Stuff" \
@@ -199,7 +199,10 @@ A:  YES!  We now support attachments with email!
     
     Example:
     
-      email -s Attachments --attach file1,file2,file3 dean@somedomain.org
+      email -s Attachment --attach file dean@somedomain.org
+
+      # Multiple files
+      email -s Attachments --attach file1 --attach file2 dean@somedomain.org
       
 
 Q: Do you allow SMTP AUTH?
