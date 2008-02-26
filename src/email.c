@@ -230,22 +230,22 @@ main(int argc, char **argv)
 	while ((get = getopt_long_only(argc, argv, opts, Gopts, &opt_index)) > EOF) {
 		switch (get) {
 		case 'n':
-			setConfValue("MY_NAME", optarg);
+			setConfValue("MY_NAME", xstrdup(optarg));
 			break;
 		case 'f':
-			setConfValue("MY_EMAIL", optarg);
+			setConfValue("MY_EMAIL", xstrdup(optarg));
 			break;
 		case 'a':
 			if (!Mopts.attach) {
 				Mopts.attach = dlInit(defaultDestr);
 			}
-			dlInsertTop(Mopts.attach, optarg);
+			dlInsertTop(Mopts.attach, xstrdup(optarg));
 			break;
 		case 'q':
 			quiet = 1;
 			break;
 		case 'p':
-			setConfValue("SMTP_PORT", optarg);
+			setConfValue("SMTP_PORT", xstrdup(optarg));
 			break;
 		case 'o':
 			Mopts.priority = 1;
@@ -257,7 +257,7 @@ main(int argc, char **argv)
 			Mopts.subject = optarg;
 			break;
 		case 'r':
-			setConfValue("SMTP_SERVER", optarg);
+			setConfValue("SMTP_SERVER", xstrdup(optarg));
 			break;
 		case 'c':
 			conf_file = optarg;
@@ -278,22 +278,22 @@ main(int argc, char **argv)
 			Mopts.blank = 1;
 			break;
 		case 'u':
-			setConfValue("SMTP_AUTH_USER", optarg);
+			setConfValue("SMTP_AUTH_USER", xstrdup(optarg));
 			break;
 		case 'i':
-			setConfValue("SMTP_AUTH_PASS", optarg);
+			setConfValue("SMTP_AUTH_PASS", xstrdup(optarg));
 			break;
 		case 'm':
-			setConfValue("SMTP_AUTH", optarg);
+			setConfValue("SMTP_AUTH", xstrdup(optarg));
 			break;
 		case 'g':
-			setConfValue("GPG_PASS", optarg);
+			setConfValue("GPG_PASS", xstrdup(optarg));
 			break;
 		case 'H':
 			if (!Mopts.headers) {
 				Mopts.headers = dlInit(defaultDestr);
 			}
-			dlInsertTop(Mopts.headers, optarg);
+			dlInsertTop(Mopts.headers, xstrdup(optarg));
 			break;
 		case '?':
 			usage();
