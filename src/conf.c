@@ -351,10 +351,10 @@ configure(void)
 
 		/* If they didn't specify an smtp server, use sendmail */
 		if (!getConfValue("SMTP_SERVER")) {
-			setConfValue("SENDMAIL_BIN", "/usr/lib/sendmail -t -i");
+			setConfValue("SENDMAIL_BIN", xstrdup("/usr/lib/sendmail -t -i"));
 		} else {
 			if (!getConfValue("SMTP_PORT")) {
-				setConfValue("SMTP_PORT", "25");
+				setConfValue("SMTP_PORT", xstrdup("25"));
 			}
 		}
 	} else {
@@ -367,7 +367,7 @@ configure(void)
 
 		/* If port wasn't in config file or specified on command line */
 		if (!getConfValue("SMTP_PORT")) {
-			setConfValue("SMTP_PORT", "25");
+			setConfValue("SMTP_PORT", xstrdup("25"));
 		}
 		/* If name wasn't specified */
 		if (!getConfValue("MY_NAME")) {

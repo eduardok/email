@@ -77,7 +77,8 @@ struct mailer_options {
 
 void usage(void);
 
-#define setConfValue(tok, val) (dhInsert(table, (tok), (val)))
-#define getConfValue(tok) ((char *)dhGetItem(table, (tok)))
+char *getConfValue(const char *tok);
+void setConfValue(const char *tok, const char *val);
+
 
 #endif /* __EMAIL_H */

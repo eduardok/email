@@ -116,6 +116,19 @@ usage(void)
 	exit(EXIT_SUCCESS);
 }
 
+char *
+getConfValue(const char *tok)
+{
+	return (char *)dhGetItem(table, tok);
+}
+
+void
+setConfValue(const char *tok, const char *val)
+{
+	dhInsert(table, tok, val);
+}
+
+
 /**
  * ModuleUsage will take an argument for the specified 
  * module and print out help information on the topic.  
