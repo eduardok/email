@@ -54,7 +54,7 @@ typedef struct {
  * Frees an ENTRY structure if it needs to be feed 
 **/
 static void
-freeEntry(ENTRY * en)
+freeEntry(ENTRY *en)
 {
 	xfree(en->e_gors);
 	xfree(en->e_name);
@@ -113,7 +113,7 @@ separate(char *string)
 			next++;
 		}
 
-		dlInsertTop(ret, next);
+		dlInsertTop(ret, xstrdup(next));
 		next = strtok(NULL, ",");
 		counter++;
 	}
@@ -154,7 +154,7 @@ makeEntry(ENTRY *en, const char *gors, const char *name, const char *addr)
  * in the ENTRY structure that is passed.
 **/
 static int
-getEntry(ENTRY *en, struct addr *ent, FILE *book)
+getEntry(ENTRY *en, char *ent, FILE *book)
 {
 	int ch, line=1;
 	dstrbuf *ptr, *gors;
@@ -230,7 +230,7 @@ getEntry(ENTRY *en, struct addr *ent, FILE *book)
 		}
 
 		if (ch == '\n') {
-			if (strcasecmp(name->str, ent->email) == 0) {
+			if (strcasecmp(name->str, ent) == 0) {
 				if (makeEntry(en, gors->str, name->str, addr->str) 
 					== ERROR) {
 					ch = line;
@@ -285,9 +285,9 @@ insertEntry(dlist to, const char *name, const char *addr)
 static void
 checkAndCopy(dlist to, dlist from)
 {
-	struct addr *next = NULL;
-	while ((next=(struct addr *)dlGetNext(from)) != NULL) {
-		insertEntry(to, next->name, next->email);
+	char *next=NULL;
+	while ((next=(char *)dlGetNext(from)) != NULL) {
+		insertEntry(to, NULL, next);
 	}
 }
 
@@ -304,16 +304,16 @@ checkAddrBook(dlist to, dlist from, FILE *book)
 {
 	ENTRY en;
 	int retval;
-	struct addr *next=NULL;
+	char *next=NULL;
 
 	/* Go through list from, resolving to list curr */
-	while ((next=(struct addr *)dlGetNext(from)) != NULL) {
+	while ((next=(char *)dlGetNext(from)) != NULL) {
 		retval = getEntry(&en, next, book);
 		if (retval > 0) {
 			fatal("Address book incorrectly formated on line %d\n", retval);
 			return ERROR;
 		} else if (retval == EOF) {
-			insertEntry(to, NULL, next->email);
+			insertEntry(to, NULL, next);
 		} else {
 			if (addEntry(to, &en, book) == ERROR) {
 				return ERROR;
@@ -394,13 +394,14 @@ getNames(char *string)
 	} else {
 		bpath = expandPath(addr_book);
 		book = fopen(bpath->str, "r");
-		dsbDestroy(bpath);
 		if (!book) {
 			fatal("Can't open address book: '%s'\n", bpath->str);
 			dlDestroy(ret);
 			dlDestroy(tmp);
+			dsbDestroy(bpath);
 			return NULL;
 		}
+		dsbDestroy(bpath);
 		checkAddrBook(ret, tmp, book);
 		fclose(book);
 	}
