@@ -158,7 +158,7 @@ editEmail(void)
 	dstrbuf *fpath=NULL;
 	dstrbuf *buf=NULL;
 	size_t fsize=0;
-	char filename[TMP_MAX]={0};
+	char filename[L_tmpnam]={0};
 
 	assert(filename != NULL);
 

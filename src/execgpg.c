@@ -72,7 +72,7 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	int retval;
 	FILE *retfile;
 	char *gpg_bin, *gpg_pass;
-	char filename[TMP_MAX]={0};
+	char filename[L_tmpnam]={0};
 	dstrbuf *encto=NULL;
 	dstrbuf *gpg=NULL;
 	dstrbuf *cmd=NULL;
