@@ -97,7 +97,7 @@ printSmtpError()
  * if it does not exist, it will prompt them for it.
 **/
 static char *
-get_smtp_pass(void)
+getSmtpPass(void)
 {
 	char *retval = getConfValue("SMTP_AUTH_PASS");
 	if (!retval) {
@@ -115,10 +115,10 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 {
 	dsocket *sd;
 	int retval, bytes;
-	char *smtp_auth = NULL;
-	char *email_addr = NULL;
-	char *user = NULL;
-	char *pass = NULL;
+	char *smtp_auth=NULL;
+	char *email_addr=NULL;
+	char *use_tls=NULL;
+	char *user=NULL, *pass=NULL;
 	struct prbar *bar=NULL;
 	char nodename[MAXBUF] = { 0 };
 	char *ptr = msg->str;
@@ -137,7 +137,7 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 			fatal("You must set SMTP_AUTH_USER in order to user SMTP_AUTH\n");
 			return ERROR;
 		}
-		pass = get_smtp_pass();
+		pass = getSmtpPass();
 		if (!pass) {
 			fatal("Failed to get SMTP Password.\n");
 			return ERROR;
@@ -156,6 +156,22 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 	if (smtpInit(sd, nodename) == ERROR) {
 		printSmtpError();
 		goto end;
+	}
+
+	/* Use TLS? */
+	use_tls = getConfValue("USE_TLS");
+	if (strcasecmp(use_tls, "true") == 0) {
+		if (smtpStartTls(sd) != ERROR) {
+			dnetUseTls(sd);
+			dnetVerifyCert(sd);
+			if (smtpInit(sd, nodename) == ERROR) {
+				printSmtpError();
+				goto end;
+			}
+		} else {
+			printSmtpError();
+			goto end;
+		}
 	}
 
 	/* See if we're using SMTP_AUTH. */

@@ -47,12 +47,14 @@ dstrbuf *
 readInput(void)
 {
 	dstrbuf *fpath=NULL;
-	dstrbuf *buf=DSB_NEW;
+	dstrbuf *tmp=DSB_NEW, *buf=DSB_NEW;
 	char *sig_file = NULL;
 
 	while (!feof(stdin)) {
-		dsbReadline(buf, stdin);
+		dsbReadline(tmp, stdin);
+		dsbCat(buf, tmp->str);
 	}
+	dsbDestroy(tmp);
 
 	/* If they specified a signature file, let's append it */
 	sig_file = getConfValue("SIGNATURE_FILE");

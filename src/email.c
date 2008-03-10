@@ -75,7 +75,8 @@ static struct option Gopts[] = {
 	{"from-addr", 1, 0, 'f'},
 	{"from-name", 1, 0, 'n'},
 	{"header", 1, 0, 'H'},
-	{"to-name", 1, 0, 5}
+	{"to-name", 1, 0, 5},
+	{"tls", 0, 0, 6}
 };
 
 /**
@@ -106,6 +107,7 @@ usage(void)
 	    "        -sign                 Sign the email with GPG\n"
 	    "        -html                 Send message in HTML format "
 	    "( Make your own HTML! )\n"
+	    "	     -tls		   Use TLS/SSL\n"
 	    "    -m, -smtp-auth type       Set the SMTP AUTH type (plain or login)\n"
 	    "    -u, -smtp-user username   Specify your username for SMTP AUTH\n"
 	    "    -i, -smtp-pass password   Specify your password for SMTP AUTH\n"
@@ -309,6 +311,12 @@ main(int argc, char **argv)
 			break;
 		case 4:
 			bcc_string = optarg;
+			break;
+		case 5:
+			/* To name? */
+			break;
+		case 6:
+			setConfValue("USE_TLS", xstrdup("true"));
 			break;
 		default:
 			/* Print an error message here  */

@@ -57,6 +57,7 @@ static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"GPG_BIN",
 	"GPG_PASS",
 	"SMTP_AUTH",
+	"USE_TLS",
 	"SMTP_AUTH_USER",
 	"SMTP_AUTH_PASS"
 };

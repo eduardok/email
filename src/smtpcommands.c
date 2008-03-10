@@ -61,7 +61,7 @@ readResponse(dsocket *sd, dstrbuf *buf)
 		do {
 			dsbClear(tmpbuf);
 			dnetReadline(sd, tmpbuf);
-			if (dnetErr(sd) || dnetEof(sd)) {
+			if (dnetErr(sd)) {
 				smtpSetErr("Lost connection with SMTP server");
 				retval = ERROR;
 				break;
@@ -150,7 +150,7 @@ helo(dsocket *sd, const char *domain)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- HELO\n");
+	printf("--> HELO\n");
 	fflush(stdout);
 #endif
 
@@ -163,7 +163,7 @@ helo(dsocket *sd, const char *domain)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -189,7 +189,7 @@ ehlo(dsocket *sd, const char *domain)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n--> %s", rbuf->str);
+	printf("\r\n<-- %s", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -200,7 +200,7 @@ ehlo(dsocket *sd, const char *domain)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n<-- EHLO %s\r\n", domain);
+	printf("\r\n--> EHLO %s\r\n", domain);
 	fflush(stdout);
 #endif
 
@@ -214,7 +214,7 @@ ehlo(dsocket *sd, const char *domain)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n--> %s", rbuf->str);
+	printf("\r\n<-- %s", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -240,7 +240,7 @@ mailFrom(dsocket *sd, const char *email)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n<-- MAIL FROM:<%s>\r\n", email);
+	printf("\r\n--> MAIL FROM:<%s>\r\n", email);
 #endif
 
 	/* read return message and let's return it's code */
@@ -254,7 +254,7 @@ mailFrom(dsocket *sd, const char *email)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n--> %s", rbuf->str);
+	printf("\r\n<-- %s", rbuf->str);
 #endif
 
 end:
@@ -278,7 +278,7 @@ rcpt(dsocket *sd, const char *email)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n<-- RCPT TO: <%s>\r\n", email);
+	printf("\r\n--> RCPT TO: <%s>\r\n", email);
 	fflush(stdout);
 #endif
 
@@ -293,7 +293,7 @@ rcpt(dsocket *sd, const char *email)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n--> %s", rbuf->str);
+	printf("\r\n<-- %s", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -320,7 +320,7 @@ quit(dsocket *sd)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- QUIT\r\n");
+	printf("--> QUIT\r\n");
 #endif
 
 	retval = readResponse(sd, rbuf);
@@ -333,7 +333,7 @@ quit(dsocket *sd)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s", rbuf->str);
+	printf("<-- %s", rbuf->str);
 #endif
 
 end:
@@ -355,7 +355,7 @@ data(dsocket *sd)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("\r\n<-- DATA\r\n");
+	printf("\r\n--> DATA\r\n");
 #endif
 
 	/* Read return message and let's return it's code */
@@ -369,7 +369,7 @@ data(dsocket *sd)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s", rbuf->str);
+	printf("<-- %s", rbuf->str);
 #endif
 
 end:
@@ -394,7 +394,7 @@ rset(dsocket *sd)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- RSET\n");
+	printf("--> RSET\n");
 	fflush(stdout);
 #endif
 
@@ -409,7 +409,7 @@ rset(dsocket *sd)
 
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -437,7 +437,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- AUTH LOGIN\n");
+	printf("--> AUTH LOGIN\n");
 	fflush(stdout);
 #endif
 
@@ -451,7 +451,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -465,7 +465,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- %s\n", data->str);
+	printf("--> %s\n", data->str);
 	fflush(stdout);
 #endif
 	dsbDestroy(data);
@@ -481,7 +481,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -505,7 +505,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- AUTH PLAIN\n");
+	printf("--> AUTH PLAIN\n");
 	fflush(stdout);
 #endif
 
@@ -519,7 +519,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -532,7 +532,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("<-- %s\n", data->str);
+	printf("--> %s\n", data->str);
 	fflush(stdout);
 #endif
 
@@ -547,7 +547,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 	}
 
 #ifdef DEBUG_SMTP
-	printf("--> %s\n", rbuf->str);
+	printf("<-- %s\n", rbuf->str);
 	fflush(stdout);
 #endif
 
@@ -614,6 +614,39 @@ smtpInit(dsocket *sd, const char *domain)
 	}
 
 	return retval;
+}
+
+int
+smtpStartTls(dsocket *sd)
+{
+        int retval=SUCCESS;
+        dstrbuf *sb=DSB_NEW;
+
+        if (writeResponse(sd, "STARTTLS\r\n") < 0) {
+                smtpSetErr("Lost connection to SMTP Server");
+                retval = ERROR;
+                goto end;
+        }
+
+#ifdef DEBUG_SMTP
+	printf("--> STARTTLS\n");
+	fflush(stdout);
+#endif
+
+        retval = readResponse(sd, sb);
+        if (retval != 220) {
+                smtpSetErr(sb->str);
+                retval = ERROR;
+        }
+
+#ifdef DEBUG_SMTP
+	printf("<-- %s\n", sb->str);
+	fflush(stdout);
+#endif
+
+end:
+        dsbDestroy(sb);
+        return retval;
 }
 
 /**
