@@ -76,7 +76,8 @@ static struct option Gopts[] = {
 	{"from-name", 1, 0, 'n'},
 	{"header", 1, 0, 'H'},
 	{"to-name", 1, 0, 5},
-	{"tls", 0, 0, 6}
+	{"tls", 0, 0, 6},
+	{NULL, 0, NULL, 0 }
 };
 
 /**

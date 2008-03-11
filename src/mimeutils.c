@@ -117,7 +117,7 @@ mimeFiletype(const char *filename)
 	ext = tmpvec[1];
 	while (!feof(file)) {
 		dsbReadline(buf, file);
-		if (buf->str[0] == '#') {
+		if (buf->str[0] == '#' || buf->str[0] == '\n') {
 			continue;
 		}
 		type = getMimeType(buf->str);
