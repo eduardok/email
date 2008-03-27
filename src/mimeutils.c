@@ -59,7 +59,7 @@ static dstrbuf *
 getMimeType(const char *str)
 {
 	dstrbuf *ret = DSB_NEW;
-	while (*str != ' ' && *str != '\t') {
+	while (*str != ' ' && *str != '\t' && *str != '\n' && *str != '\0') {
 		dsbnCat(ret, str, 1);
 		str++;
 	}
