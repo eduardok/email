@@ -40,7 +40,7 @@ static dstrbuf *
 getMimeType(const char *str)
 {
 	dstrbuf *ret = DSB_NEW;
-	while (*str != ' ' && *str != '\t' && *str != '\n' && *str != '\0') {
+	while (*str != ' ' && *str != '\t' && *str != '\0') {
 		dsbnCat(ret, str, 1);
 		str++;
 	}
@@ -96,11 +96,18 @@ mimeFiletype(const char *filename)
 		goto exit;
 	}
 	ext = tmpvec[1];
+	/* If we don't know  the extension, we don't know what type
+	 * of file it's going to be. Therefore, skip all of this.  */
+	if (!ext) {
+		goto exit;
+	}
+
 	while (!feof(file)) {
 		dsbReadline(buf, file);
 		if (buf->str[0] == '#' || buf->str[0] == '\n') {
 			continue;
 		}
+		chomp(buf->str);
 		type = getMimeType(buf->str);
 		if (!type) {
 			continue;
