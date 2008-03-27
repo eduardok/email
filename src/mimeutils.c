@@ -36,25 +36,6 @@
 #include "dutil.h"
 #include "mimeutils.h"
 
-static void
-mimeVecDestr(void *ptr)
-{
-	xfree(ptr);
-}
-
-static dvector
-getMimeExts(const char *line)
-{
-	dvector ret = dvCreate(5, mimeVecDestr);
-	dvector vec = explode(line, " \t");
-	int i, len=dvLength(vec);
-	for (i=1; i < len; i++) {
-		dvAddItem(&ret, xstrdup((char *)vec[i]));
-	}
-	dvDestroy(vec);
-	return ret;
-}
-
 static dstrbuf *
 getMimeType(const char *str)
 {
@@ -124,9 +105,11 @@ mimeFiletype(const char *filename)
 		if (!type) {
 			continue;
 		}
-		vec = getMimeExts(buf->str);
+		vec = explode(buf->str, " \t");
 		veclen = dvLength(vec);
-		for (i=0; i < veclen; i++) {
+		/* Start i at 1 since the first element in the
+		 * vector is the mime type. The exts are after that. */
+		for (i=1; i < veclen; i++) {
 			if (strcmp((char *)vec[i], ext) == 0) {
 				found = true;
 				break;
