@@ -57,10 +57,10 @@ struct addr {
 /* Globally defined vars */
 dhash table;
 char *conf_file;
-short quiet;
 dstrbuf *global_msg;
 
 struct mailer_options {
+	bool verbose;
 	short html;
 	short encrypt;
 	short sign;

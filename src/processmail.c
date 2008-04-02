@@ -69,7 +69,7 @@ processInternal(const char *sm_bin, dstrbuf *msgcon)
 			bytes = 100;
 		}
 		fwrite(ptr, sizeof(char), bytes, open_sendmail);
-		if (!quiet && bar != NULL) {
+		if (Mopts.verbose && bar != NULL) {
 			prbarPrint(bytes, bar);
 		}
 		ptr += bytes;
@@ -225,7 +225,7 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 		if (retval == ERROR) {
 			goto end;
 		}
-		if (!quiet && bar != NULL) {
+		if (Mopts.verbose && bar != NULL) {
 			prbarPrint(bytes, bar);
 		}
 		ptr += bytes;

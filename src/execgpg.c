@@ -38,26 +38,34 @@
 #include "execgpg.h"
 #include "error.h"
 
+
+static void
+writeToTmpFile(const char *file, dstrbuf *buf)
+{
+	FILE *o = fopen(file, "w");
+	fwrite(buf->str, 1, buf->len, o);
+	fclose(o);
+}
+
 /**
  * Calls gpg with popen so that we may write to stdin 
  * to pass gpg the password provided.  
 **/
 static int
-execgpg(const char *command, char *passwd, const char *input)
+execgpg(const char *command, char *passwd)
 {
 	FILE *gpg_stdin = NULL;
 	if (!passwd) {
 		passwd = getpass("Please enter your GPG password: ");
 	}
 
-	gpg_stdin = popen(command, "r+");
+	gpg_stdin = popen(command, "w");
 	if (!gpg_stdin) {
 		return ERROR;
 	}
 
 	/* Push password to stdin */
 	fputs(passwd, gpg_stdin);
-	fputs(input, gpg_stdin);
 	pclose(gpg_stdin);
 	return 0;
 }
@@ -73,6 +81,7 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	FILE *retfile;
 	char *gpg_bin, *gpg_pass;
 	char filename[L_tmpnam]={0};
+	char tmpfile[L_tmpnam]={0};
 	dstrbuf *encto=NULL;
 	dstrbuf *gpg=NULL;
 	dstrbuf *cmd=NULL;
@@ -88,23 +97,24 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	/* Get the first email from Mopts.to */
 	encto = getFirstEmail();
 	tmpnam(filename);
+	tmpnam(tmpfile);
+	writeToTmpFile(tmpfile, input);
 
 	gpg = expandPath(gpg_bin);
 	cmd = DSB_NEW;
 	dsbPrintf(cmd, "%s -a -o '%s' --no-secmem-warning --passphrase-fd 0 "
 		" --no-tty", gpg->str, filename);
 	if (call_type == GPG_SIG) {
-		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", 
-			encto->str);
+		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto->str);
 	} else if (call_type == GPG_ENC) {
 		dsbPrintf(cmd, " -a -r -e ");
 	} else {
 		dsbPrintf(cmd, " -r '%s' -s -e", encto->str);
 	}
-	retval = execgpg(cmd->str, gpg_pass, input->str);
-
-	dsbDestroy(cmd);
+	dsbPrintf(cmd, " '%s'", tmpfile);
+	retval = execgpg(cmd->str, gpg_pass);
 	dsbDestroy(encto);
+	unlink(tmpfile);
 
 	if (retval == -1) {
 		fatal("Error executing: %s", gpg->str);
@@ -115,12 +125,17 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	dsbDestroy(gpg);
 	retfile = fopen(filename, "r");
 	if (!retfile) {
-		fatal("Error executing: %s", gpg->str);
+		fatal("Gpg didn't provide any output. This is a possible bug.\n\t%s\n",
+			cmd->str);
+		dsbDestroy(cmd);
 		return NULL;
 	}
+
+	dsbDestroy(cmd);
 	buf = DSB_NEW;
 	dsbFread(buf, filesize(filename), retfile);
 	fclose(retfile);
+	unlink(filename);
 	return buf;
 }
 

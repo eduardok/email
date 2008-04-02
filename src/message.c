@@ -372,14 +372,22 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 	border1 = mimeMakeBoundary();
 	if (Mopts.attach) {
 		border2 = mimeMakeBoundary();
+	} else {
+		border2 = DSB_NEW;
 	}
 
 	if (makeGpgMessage(msg, buf, border2->str) < 0) {
 		dsbDestroy(buf);
-		return NULL;
+		buf=NULL;
+		goto end;
 	}
 
 	gpgdata = callGpg(msg, gpg_type);
+	if (!gpgdata) {
+		dsbDestroy(buf);
+		buf=NULL;
+		goto end;
+	}
 	printHeaders(border1->str, buf);
 
 	dsbPrintf(buf, "\r\n--%s\r\n%s", border1->str, msg->str);
@@ -389,6 +397,7 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 	dsbPrintf(buf, "%s", gpgdata->str);
 	dsbPrintf(buf, "\r\n--%s--\r\n", border1->str);
 
+end:
 	dsbDestroy(gpgdata);
 	dsbDestroy(border1);
 	dsbDestroy(border2);
@@ -476,7 +485,6 @@ createMail(void)
 	}
 
 	if (!global_msg) {
-		fatal("Could not create email properly");
 		global_msg = DSB_NEW;
 		dsbCopy(global_msg, msg->str);
 		properExit(ERROR);

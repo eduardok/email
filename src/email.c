@@ -49,7 +49,7 @@ defaultDestr(void *ptr)
 static struct option Gopts[] = {
 	{"attach", 1, 0, 'a'},
 	{"attachment", 1, 0, 'a'},
-	{"quiet", 0, 0, 'q'},
+	{"verbose", 0, 0, 'v'},
 	{"high-priority", 0, 0, 'o'},
 	{"encrypt", 0, 0, 'e'},
 	{"html", 0, 0, 1},
@@ -91,7 +91,7 @@ usage(void)
 	    "email [options] recipient1,recipient2,...\n\n"
 	    "    -h, -help module          Print this message or specify one of the "
 	    "below options\n"
-	    "    -q, -quiet                Suppress displayed messages (Good for cron)\n"
+	    "    -V, -verbose              Display mailing progress.\n"
 	    "    -f, -from-addr            Senders mail address\n"
 	    "    -n, -from-name            Senders name\n"
 	    "    -b, -blank-mail           Allows you to send a blank email\n"
@@ -108,7 +108,7 @@ usage(void)
 	    "        -sign                 Sign the email with GPG\n"
 	    "        -html                 Send message in HTML format "
 	    "( Make your own HTML! )\n"
-	    "	     -tls		   Use TLS/SSL\n"
+	    "        -tls                  Use TLS/SSL\n"
 	    "    -m, -smtp-auth type       Set the SMTP AUTH type (plain or login)\n"
 	    "    -u, -smtp-user username   Specify your username for SMTP AUTH\n"
 	    "    -i, -smtp-pass password   Specify your password for SMTP AUTH\n"
@@ -204,7 +204,7 @@ main(int argc, char **argv)
 	int opt_index = 0;          /* for getopt */
 	char *cc_string = NULL;
 	char *bcc_string = NULL;
-	const char *opts = "f:n:a:p:oqedvtb?c:s:r:u:i:g:m:";
+	const char *opts = "f:n:a:p:oVedvtb?c:s:r:u:i:g:m:";
 
 	/* Set certian global options to NULL */
 	conf_file = NULL;
@@ -244,8 +244,8 @@ main(int argc, char **argv)
 			}
 			dlInsertTop(Mopts.attach, xstrdup(optarg));
 			break;
-		case 'q':
-			quiet = 1;
+		case 'V':
+			Mopts.verbose = true;
 			break;
 		case 'p':
 			setConfValue("SMTP_PORT", xstrdup(optarg));

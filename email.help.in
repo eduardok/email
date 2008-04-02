@@ -28,19 +28,19 @@ help|h|--help|-help|help|-h
 EOH
 
 ###########
-# Quiet help
+# Verbose help
 ###########
 
-quiet|q|--quiet|-quiet|-q
+verbose|V|--verbose|-verbose|-V
 
---quiet, -quiet, -q
+--verbose, -verbose, -V
 
-  This option will allow you to suppress any messages
-  that email displays to the screen.  This option will
-  NOT suppress error messages.  This can be done by 
-  redirecting STDERR to /dev/null if you would like.
-  However, all error messages are informative and will
-  help you to trouble shoot any issues due to failure.
+  Displays the progress of communicating with the SMTP
+  server. Tells what's going on and prints a pretty
+  progress bar when sending data.
+
+  This option has replaced the -quiet option which did
+  the exact opposite.
 
 EOH
 
@@ -383,6 +383,18 @@ EOH
 
   Example:
   email --header "X-My-Header: Stuff","X-Another-Header: Other Stuff"
+
+EOH
+
+######
+# TLS
+######
+
+--tls|-tls
+
+-tls
+
+  To turn on TLS, use this option.
 
 EOH
 

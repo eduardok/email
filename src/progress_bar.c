@@ -83,10 +83,7 @@ prbarInit(size_t bytes)
 	struct winsize win_size;
 	struct prbar *bar;
 
-	bar = malloc(sizeof(struct prbar));
-	if (!bar) {
-		return NULL;
-	}
+	bar = xmalloc(sizeof(struct prbar));
 
 	/* Clear error status if any */
 	bar->percent = 0;

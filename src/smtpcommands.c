@@ -6,6 +6,7 @@
 #include <assert.h>
 
 #include <sys/select.h>
+#include <sys/ioctl.h>
 
 #include "dnet.h"
 #include "dstrbuf.h"
@@ -13,6 +14,40 @@
 #include "mimeutils.h"
 
 static dstrbuf *errorstr;
+
+
+/** 
+ * Figures out the screen width and prints the message to fit the screen.
+ */
+void printProgress(const char *msg)
+{
+	uint i=0;
+	char *buf=NULL;
+	struct winsize win_size;
+
+	if (!Mopts.verbose) {
+		return;
+	}
+	if (!isatty(STDOUT_FILENO)) {
+		return;
+	}
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, (char *)&win_size) < 0) {
+		return;
+	}
+
+	buf = xmalloc(win_size.ws_col+1);
+	memset(buf, ' ', win_size.ws_col);
+	for (i=0; i < win_size.ws_col; i++) {
+		if (*msg == '\0') {
+			break;
+		}
+		buf[i] = *msg++;
+	}
+	printf("\r%s", buf);
+	fflush(stdout);
+	free(buf);
+}
+
 
 /**
  * Will generate a string from an error code and return
@@ -602,6 +637,7 @@ smtpInit(dsocket *sd, const char *domain)
 {
 	int retval;
 
+	printProgress("Greeting the SMTP server...");
 	retval = ehlo(sd, domain);
 	if (retval == ERROR) {
 		/*
@@ -622,6 +658,7 @@ smtpStartTls(dsocket *sd)
         int retval=SUCCESS;
         dstrbuf *sb=DSB_NEW;
 
+	printProgress("Starting TLS Communications...");
         if (writeResponse(sd, "STARTTLS\r\n") < 0) {
                 smtpSetErr("Lost connection to SMTP Server");
                 retval = ERROR;
@@ -750,6 +787,7 @@ smtpEndData(dsocket *sd)
 	int retval=ERROR;
 	dstrbuf *rbuf = DSB_NEW;
 
+	printProgress("Ending Data...");
 	if (writeResponse(sd, "\r\n.\r\n") != ERROR) {
 		retval = readResponse(sd, rbuf);
 		if (retval != 250) {
@@ -780,7 +818,9 @@ smtpEndData(dsocket *sd)
 int
 smtpQuit(dsocket *sd)
 {
-	int retval=quit(sd);
+	int retval=0;
+	printProgress("Sending QUIT...");
+	retval = quit(sd);
 	dsbDestroy(errorstr);
 	return retval;
 }

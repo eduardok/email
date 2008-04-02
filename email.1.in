@@ -67,13 +67,11 @@ Instead it is a file in email's home directory called
 be rewritten with every release of email.
 
 .TP
-.B \-\-quiet, \-q
-This option will allow you to suppress the output of
-email.  Email will normally be verbose with it's messages
-to the screen detailing its process in sending the mail (
-i.e. a progress bar is displayed).  If you are using email
-in cron jobs, it is a good idea to use this option so that
-no output, except for errors, are displayed.
+.B \-\-verbose, \-V
+This option will display the progress of communicating
+with the SMTP server. A pretty progress bar will be 
+displayed when data is sent. This option is replacing
+the old \-quiet option that would do the exact opposite.
 
 .TP
 .B \-\-blank-mail, \-blank-mail, \-b
@@ -224,6 +222,12 @@ If you don't want to keep your GPG password in your
 email.conf file (GPG_PASS), then you can use this 
 command line option to specify it.
 
+.TP
+.B \-\-tls
+If you'd like to use TLS/SSL communication with the
+smtp server, use this option (if it's not already
+set in the config file.)
+
 .SH CONFIGURATION
 Configuration of email is fairly simple.  Just open
 the default configuration file.  If you did not specify
@@ -250,6 +254,7 @@ listed below.
                       for your smtp server.
   SMTP_AUTH_USER    : Specify a username login for SMTP AUTH
   SMTP_AUTH_PASS    : Specify a password for SMTP AUTH
+  USE_TLS           : Boolean (true/false) if you want to use TLS/SSL
 .br
 
 You can choose to use sendmail instead of a remote smtp
@@ -432,7 +437,7 @@ If you find any in this program, please submit them to
 
 .SH AUTHORS
 
-.B Dean Jones   - dj@cleancode.org
+.B Dean Jones   - http://www.cleancode.org/projects/email/contact
 
 .SH COPYRIGHT
 
