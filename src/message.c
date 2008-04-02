@@ -67,12 +67,12 @@
 static void
 printMimeHeaders(const char *b, dstrbuf *msg)
 {
-	if (Mopts.encrypt) {
+	if (Mopts.gpg_opts & GPG_ENC) {
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/encrypted; "
 			"protocol=\"application/pgp-encrypted\"; " 
 			"boundary=\"%s\"\r\n", b);
-	} else if (Mopts.sign) {
+	} else if (Mopts.gpg_opts & GPG_SIG) {
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/signed; "
 			"micalg=pgp-sha1; protocol=\"application/pgp-signature\"; "
@@ -363,6 +363,7 @@ makeGpgMessage(dstrbuf *in, dstrbuf *out, const char *border)
 static dstrbuf *
 createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 {
+	dstrbuf *tmpbuf=DSB_NEW;
 	dstrbuf *gpgdata=NULL, *buf=DSB_NEW;
 	dstrbuf *border1=NULL, *border2=NULL;
 
@@ -376,13 +377,13 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 		border2 = DSB_NEW;
 	}
 
-	if (makeGpgMessage(msg, buf, border2->str) < 0) {
+	if (makeGpgMessage(msg, tmpbuf, border2->str) < 0) {
 		dsbDestroy(buf);
 		buf=NULL;
 		goto end;
 	}
 
-	gpgdata = callGpg(msg, gpg_type);
+	gpgdata = callGpg(tmpbuf, gpg_type);
 	if (!gpgdata) {
 		dsbDestroy(buf);
 		buf=NULL;
@@ -390,14 +391,24 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 	}
 	printHeaders(border1->str, buf);
 
-	dsbPrintf(buf, "\r\n--%s\r\n%s", border1->str, msg->str);
 	dsbPrintf(buf, "\r\n--%s\r\n", border1->str);
-	dsbPrintf(buf, "Content-Type: application/pgp-signature\r\n");
-	dsbPrintf(buf, "Content-Description: This is a digitally signed message\r\n\r\n");
+	if (gpg_type & GPG_ENC) {
+		dsbPrintf(buf, "Content-Type: application/pgp-encrypted\r\n\r\n");
+		dsbPrintf(buf, "Version: 1\r\n");
+		dsbPrintf(buf, "\r\n--%s\r\n", border1->str);
+		dsbPrintf(buf, "Content-type: application/octet-stream; "
+			       "name=encrypted.asc\r\n\r\n");
+	} else if (gpg_type & GPG_SIG) {
+		dsbPrintf(buf, "%s\r\n", tmpbuf->str);
+		dsbPrintf(buf, "\r\n--%s\r\n", border1->str);
+		dsbPrintf(buf, "Content-Type: application/pgp-signature\r\n");
+		dsbPrintf(buf, "Content-Description: This is a digitally signed message\r\n\r\n");
+	} 
 	dsbPrintf(buf, "%s", gpgdata->str);
 	dsbPrintf(buf, "\r\n--%s--\r\n", border1->str);
 
 end:
+	dsbDestroy(tmpbuf);
 	dsbDestroy(gpgdata);
 	dsbDestroy(border1);
 	dsbDestroy(border2);
@@ -476,10 +487,8 @@ createMail(void)
 	}
 
 	/* Create a message according to the type */
-	if (Mopts.encrypt) {
-		global_msg = createGpgEmail(msg, GPG_ENC);
-	} else if (Mopts.sign) {
-		global_msg = createGpgEmail(msg, GPG_SIG);
+	if (Mopts.gpg_opts) {
+		global_msg = createGpgEmail(msg, Mopts.gpg_opts);
 	} else {
 		global_msg = createPlainEmail(msg);
 	}

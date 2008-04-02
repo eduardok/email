@@ -104,12 +104,12 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	cmd = DSB_NEW;
 	dsbPrintf(cmd, "%s -a -o '%s' --no-secmem-warning --passphrase-fd 0 "
 		" --no-tty", gpg->str, filename);
-	if (call_type == GPG_SIG) {
-		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto->str);
-	} else if (call_type == GPG_ENC) {
-		dsbPrintf(cmd, " -a -r -e ");
-	} else {
+	if ((call_type & GPG_SIG) && (call_type & GPG_ENC)) {
 		dsbPrintf(cmd, " -r '%s' -s -e", encto->str);
+	} else if (call_type & GPG_ENC) {
+		dsbPrintf(cmd, " -a -r -e ");
+	} else if (call_type & GPG_SIG) {
+		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto->str);
 	}
 	dsbPrintf(cmd, " '%s'", tmpfile);
 	retval = execgpg(cmd->str, gpg_pass);

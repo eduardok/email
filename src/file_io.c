@@ -178,10 +178,12 @@ editEmail(void)
 	fsize = filesize(filename);
 	if (fsize <= 0) {
 		if (question("You have an empty email, send anyway?") == false) {
+			unlink(filename);
 			properExit(EASY);
 		}
 	}
 	buf = getFileContents(filename);
+	unlink(filename);
 
 	/* If they specified a signature file, let's append it */
 	sig_file = getConfValue("SIGNATURE_FILE");

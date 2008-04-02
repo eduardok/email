@@ -254,7 +254,7 @@ main(int argc, char **argv)
 			Mopts.priority = 1;
 			break;
 		case 'e':
-			Mopts.encrypt = 1;
+			Mopts.gpg_opts |= GPG_ENC;
 			break;
 		case 's':
 			Mopts.subject = optarg;
@@ -305,7 +305,7 @@ main(int argc, char **argv)
 			Mopts.html = 1;
 			break;
 		case 2:
-			Mopts.sign = 1;
+			Mopts.gpg_opts |= GPG_SIG;
 			break;
 		case 3:
 			cc_string = optarg;
