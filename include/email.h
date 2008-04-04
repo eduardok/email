@@ -54,6 +54,9 @@ struct addr {
 	char *email;
 };
 
+typedef enum { GPG_SIG=0x01, GPG_ENC=0x02 } GpgCallType;
+
+
 /* Globally defined vars */
 dhash table;
 char *conf_file;
@@ -62,11 +65,10 @@ dstrbuf *global_msg;
 struct mailer_options {
 	bool verbose;
 	short html;
-	short encrypt;
-	short sign;
 	short priority;
 	short receipt;
 	short blank;
+	GpgCallType gpg_opts;
 	char *subject;
 	dlist attach;
 	dlist headers;

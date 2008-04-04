@@ -23,8 +23,6 @@
 #ifndef __EXECGPG_H
 #define __EXECGPG_H  1
 
-typedef enum { GPG_SIG, GPG_ENC, GPG_ENC_SIG } GpgCallType;
-
 dstrbuf *callGpg(dstrbuf *infile, GpgCallType call_type);
 
 #endif /* EXECGPG_H */
