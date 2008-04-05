@@ -38,20 +38,21 @@ then
 fi
 
 
+# Build svn command
+cmd="svn export -q http://svn.cleancode.org/svn/email/${branch} email-${VERSION}"
+
 # Make a temporary directory and cvs export the HEAD
-printf "\rDoing a 'cvs export -r$branch email...            "
+printf "\rDoing a '${cmd}'...            "
 mkdir "$HOME"/temp
 cd "$HOME"/temp
-cvs -Q export -r$branch email
+$cmd
 
-# Move directory over to version release name
-printf "\rCopying email directory to email-$VERSION...   "
-mv email email-"$VERSION"
-sleep 1
+# Get dlib
+cd email-${VERSION}
+svn export -q http://svn.cleancode.org/svn/dlib
 
 # Fix VERSION and configure.ac script in release dir
 printf "\rParsing files and creating ./configure...      "
-cd email-"$VERSION"
 sed -f "$make_dist_file" configure.in.dist > configure.in
 autoconf > /dev/null 2>&1
 rm -f configure.in.dist make_dist
