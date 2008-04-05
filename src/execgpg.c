@@ -107,7 +107,7 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	if ((call_type & GPG_SIG) && (call_type & GPG_ENC)) {
 		dsbPrintf(cmd, " -r '%s' -s -e", encto->str);
 	} else if (call_type & GPG_ENC) {
-		dsbPrintf(cmd, " -a -r -e ");
+		dsbPrintf(cmd, " -e -r '%s'", encto->str);
 	} else if (call_type & GPG_SIG) {
 		dsbPrintf(cmd, " --digest-algo=SHA1 --sign --detach -u '%s'", encto->str);
 	}
