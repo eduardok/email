@@ -27,7 +27,7 @@ configurable address book.  This way you can specify
 a persons name with an email address and also place
 a group of names into one group for sending.
 
-Email also support attachments.  It will accept N attachments
+Email also supports attachments.  It will accept N attachments
 via a command line option and encode them with Base64 before
 sending them with the email.  
 
@@ -314,6 +314,14 @@ SMTP_AUTH_PASS:
     password before proceeding.  So if you're using email from
     a cron job and don't expect any interaction with email,
     please set this option!
+
+USE_TLS:
+    This option allows you to use TLS/SSL to communicate with
+    your SMTP server. This is the most basic use of TLS/SSL
+    possible. Please be advised that not much is done to 
+    verify the certificate from the server. Also, currently
+    there is no support for providing your own certificate for
+    the server to authenticate since typical TLS does not do this.
     
 .SH ENVIRONMENT VARIABLES
 
@@ -428,22 +436,18 @@ email \-s "files attached" Dean,Jeff --attach stuff.tar.gz,readme.doc
 
 .SH BUGS
 
-They're those little things that make you cringe when you
-find them in your bed ( or program ) at 3 am.
-
 If you find any in this program, please submit them to 
-.B software@cleancode.org
-
+.TP
+.B http://www.cleancode.org/projects/email/contact
 
 .SH AUTHORS
 
 .B Dean Jones   - http://www.cleancode.org/projects/email/contact
 
+.SH THANKS FOR RELEASE V3.0
+.B Philip Lewis - Helped in debugging.
+
 .SH COPYRIGHT
 
-.B (C) 2001 - 2004
-
-.SH SEE ALSO
-
-.BR email (1)
+.B (C) 2001 - 2008
 

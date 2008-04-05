@@ -58,15 +58,15 @@ A:  Well, first thing you should do, is configure this email client.
     4: MY_EMAIL:     	   Please specify your email address here
     5: REPLY_TO:     	   Specify a seperate reply to address here
     6: SIGNATURE_FILE:	   Specify your signature file
-    7: SIGNATURE_DIVIDE:   Specify a particular design for a divider
-    8: ADDRESS_BOOK:	   Where to find your address book file
-    9: SAVE_SENT_MAIL:     What directory to save the email.sent file to
-   10: TEMP_DIR:           Specify where to store temporary files
-   11: GPG_BIN:            Specify where the gpg binary is located.
-   12: GPG_PASS:           Optional passphrase for gpg.
-   13: SMTP_AUTH:          LOGIN or PLAIN are supported SMTP AUTH types
-   14: SMTP_AUTH_USER:     Your SMTP AUTH username
-   15: SMTP_AUTH_PASS:     Your SMTP AUTH Password
+    7: ADDRESS_BOOK:	   Where to find your address book file
+    8: SAVE_SENT_MAIL:     What directory to save the email.sent file to
+    9: TEMP_DIR:           Specify where to store temporary files
+   10: GPG_BIN:            Specify where the gpg binary is located.
+   11: GPG_PASS:           Optional passphrase for gpg.
+   12: SMTP_AUTH:          LOGIN or PLAIN are supported SMTP AUTH types
+   13: SMTP_AUTH_USER:     Your SMTP AUTH username
+   14: SMTP_AUTH_PASS:     Your SMTP AUTH Password
+   15: USE_TLS             Boolean (true/false) to use TLS/SSL
 
     SMTP_SERVER can be either a remote SMTP servers fully qualified domain name, or
     an IP address.  You may also opt to use 'sendmail' internally instead of sending
@@ -214,7 +214,7 @@ A:  Yes! Email does SMTP AUTH.  You will need to set a few options in the email.
 
 Q: Can I join the development team?
 
-A:  Yes, send an email at http://email.cleancode.org/?pid=contact
+A:  Yes, send an email at http://www.cleancode.org/projects/email
 
 
 Q: What Music did you listen to while writing it?
@@ -230,16 +230,6 @@ A:  Because 'mailx' won't send to remote smtp servers and I remove sendmail ever
     I install Slackware!!  I needed something that would communicate with Remote
     smtp servers and encrypt my messages on the fly instead of taking numorous steps to 
     do so.
-
-
-Q: Will 'email' take over 'mailx'?
-
-A:  No, not completely.  It has far surpassed mailx's ability to send mail.  However, email
-    will never get or read mail.  mailx was actually a big contraversy amongst the Unix
-    guru's due to how it did two different things and didn't really conform to the Unix
-    philosophy. However, email is sticking to that philosophy... 
-        "All programs should perform one function and perform it well." 
-
 
 Q: What does 'email' stand for?
 
