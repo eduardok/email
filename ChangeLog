@@ -1,11 +1,7 @@
-Nov 20 2006
-    - Fixed bug where an assert caused an abort when encrypting
-      any message with gnupg under Cygwin.
-
-    - Fixed compile errors saying SIGHUP, SIGINT or other SIG*
-      were "undeclared
-
-    - Fixed e-mail address parsing problems in which eMail would
-      report error's such as an e-mail address was invalid.
-
-    - Very small source cleanup.
+April 5th 2008
+	- Rewrote most of the code to use dlib
+	- Added TLS/SSL support
+	- Changed how mime types are gathered (by file extension now)
+	- Code reformat
+	- Attachments are now specified with multiple -a options instead
+	  of comma delimeted.
