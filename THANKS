@@ -9,7 +9,6 @@ Piotr Szlazak         Great Tester.
 Robert Lawson         Another great help in testing!
 William Shotts        A great debugger and tester!
 Andrew Y. Mironov     Testing and suggestions on UnixWare 7.11
-NULL                  Tester 
 Millis Miller         Millis has been an amazing tester/suggester.
 Adrian Tatu-Chitoiu   Submitted a patch to allow a user to specify thier 
                       from name and address from the cmd line.
@@ -18,3 +17,4 @@ Matt RobbMarkham      Found a bug with email in HP-UX
 Scott Morris          Portability Tester
 Thomas Lubnig         Staying on my case about the crappy character-by-character 
                       socket I/O I left in my code from debugging.
+Bogdan Lisovich       Testing. Found seg fault.
