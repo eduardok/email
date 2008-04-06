@@ -160,7 +160,7 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 
 	/* Use TLS? */
 	use_tls = getConfValue("USE_TLS");
-	if (strcasecmp(use_tls, "true") == 0) {
+	if (use_tls && strcasecmp(use_tls, "true") == 0) {
 		if (smtpStartTls(sd) != ERROR) {
 			dnetUseTls(sd);
 			dnetVerifyCert(sd);
