@@ -72,7 +72,7 @@ mimeFilename(const char *in_name)
  * something that does not look like a mime type, then
  * application/unknown is returned.
 **/
-#define MAGIC_FILE EMAIL_DIR "/mime-magic.mime"
+#define MAGIC_FILE EMAIL_DIR "/mime.types"
 
 dstrbuf *
 mimeFiletype(const char *filename)
