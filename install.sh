@@ -211,11 +211,11 @@ if [ ! -f "$sysconf/email/email.conf" ]; then
 		fi
     fi
 fi
-if [ ! -f "$sysconf/email/mime-magic.mime" ]; then
-    cp -f mime-magic.mime "$sysconf/email"
+if [ ! -f "$sysconf/email/mime.types" ]; then
+    cp -f mime.types "$sysconf/email"
     if [ $? -ne 0 ]
     then
-        echo "FAILED TO COPY mime-magic.mime to $sysconf/email"
+        echo "FAILED TO COPY mime.types to $sysconf/email"
         exit 2
     fi
 fi
