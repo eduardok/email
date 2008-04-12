@@ -1,3 +1,8 @@
+April 12th 2008
+	- Able to disable TLS/SSL
+	- Use remove LF and use CRLF
+	- Fixed Seg Fault (due to double free) when using AUTH PLAIN
+
 April 5th 2008
 	- Rewrote most of the code to use dlib
 	- Added TLS/SSL support

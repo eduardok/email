@@ -52,7 +52,9 @@ readInput(void)
 
 	while (!feof(stdin)) {
 		dsbReadline(tmp, stdin);
+		chomp(tmp->str);
 		dsbCat(buf, tmp->str);
+		dsbCat(buf, "\r\n");
 	}
 	dsbDestroy(tmp);
 

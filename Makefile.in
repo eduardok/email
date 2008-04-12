@@ -35,6 +35,7 @@ distclean:
 
 clean:
 	cd $(SRCDIR) && $(MAKE) clean
+	cd $(DLIB) && $(MAKE) clean
 
 clean-all:
 	cd $(SRCDIR) && $(MAKE) clean-all

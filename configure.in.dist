@@ -2,9 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(email, @ver@, <dj@cleancode.org>)
+AC_INIT(email, @ver@, <deanjones@cleancode.org>)
 AC_CONFIG_SRCDIR([src/addr_parse.c])
 AC_CONFIG_HEADER([include/config.h])
+AC_GNU_SOURCE
 
 version="@ver@"
 date="@date@"
@@ -15,8 +16,8 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 
 AC_ARG_WITH(utc, [  --with-utc              Use Coordinated Universal Time (UTC) instead of localtime], [AC_DEFINE(USE_GMT, 1, [Tell's us to use gmtime()])], )
+AC_ARG_WITH(ssl, [  --with-ssl		    force use of TLS/SSL], [use_ssl=$withval], )
 AC_SYS_LARGEFILE
-AC_GNU_SOURCE
 
 if test -n "$GCC"; then
     CFLAGS="$CFLAGS -Wall -W"
@@ -26,9 +27,11 @@ fi
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(m, sqrt)
 AC_CHECK_LIB(nsl, gethostbyname)
-AC_CHECK_LIB(ssl, SSL_library_init)
-AC_CHECK_LIB(crypto, X509_free)
-AC_CHECK_LIB(crypto, RAND_seed)
+if test -z "$use_ssl" -o "$use_ssl" = "yes"; then
+	AC_CHECK_LIB(ssl, SSL_library_init)
+	AC_CHECK_LIB(crypto, X509_free)
+	AC_CHECK_LIB(crypto, RAND_seed)
+fi
 
 echo $LIBS
 
@@ -74,3 +77,9 @@ AC_CONFIG_FILES([Makefile
                  email.help
                  email.1])
 AC_OUTPUT
+if test "$use_ssl" = "no"; then
+	args="--without-ssl"
+fi
+cd dlib
+./configure $args
+cd ..

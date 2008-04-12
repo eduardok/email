@@ -29,6 +29,7 @@ echo "s!@date@!$DATE!" > "$make_dist_file"
 echo "s!@ver@!$VERSION!" >> "$make_dist_file"
 sed -f "$make_dist_file" configure.in.dist > configure.in
 echo "$VERSION" > VERSION
+autoheader
 autoconf > /dev/null 2>&1
 if [ "$2" = "-b" ]
 then
@@ -36,7 +37,10 @@ then
     echo
     exit;
 fi
-
+cd dlib
+autoheader
+autoconf
+cd ..
 
 # Build svn command
 cmd="svn export -q http://svn.cleancode.org/svn/email/${branch} email-${VERSION}"
@@ -54,8 +58,13 @@ svn export -q http://svn.cleancode.org/svn/dlib
 # Fix VERSION and configure.ac script in release dir
 printf "\rParsing files and creating ./configure...      "
 sed -f "$make_dist_file" configure.in.dist > configure.in
+autoheader
 autoconf > /dev/null 2>&1
 rm -f configure.in.dist make_dist
+cd dlib
+autoheader
+autoconf
+cd ..
 
 # Tar and gzip distrobution file
 cd ..

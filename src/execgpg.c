@@ -40,6 +40,19 @@
 
 
 static void
+readfile(dstrbuf *buf, FILE *file)
+{
+	dstrbuf *tmp = DSB_NEW;
+	while (!feof(file)) {
+		dsbReadline(tmp, file);
+		chomp(tmp->str);
+		dsbCat(buf, tmp->str);
+		dsbCat(buf, "\r\n");
+	}
+	dsbDestroy(tmp);
+}
+		
+static void
 writeToTmpFile(const char *file, dstrbuf *buf)
 {
 	FILE *o = fopen(file, "w");
@@ -133,7 +146,7 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 
 	dsbDestroy(cmd);
 	buf = DSB_NEW;
-	dsbFread(buf, filesize(filename), retfile);
+	readfile(buf, retfile);
 	fclose(retfile);
 	unlink(filename);
 	return buf;

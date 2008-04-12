@@ -1,3 +1,7 @@
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -88,11 +92,11 @@ readResponse(dsocket *sd, dstrbuf *buf)
 	fd_set rfds;
 
 	FD_ZERO(&rfds);
-	FD_SET(sd->sock, &rfds);
+	FD_SET(dnetGetSock(sd), &rfds);
 	tv.tv_sec = 10;
 	tv.tv_usec = 0;
-	(void) select(sd->sock+1, &rfds, NULL, NULL, &tv);
-	if (FD_ISSET(sd->sock, &rfds)) {
+	(void) select(dnetGetSock(sd)+1, &rfds, NULL, NULL, &tv);
+	if (FD_ISSET(dnetGetSock(sd), &rfds)) {
 		do {
 			dsbClear(tmpbuf);
 			dnetReadline(sd, tmpbuf);
@@ -146,10 +150,10 @@ writeResponse(dsocket *sd, char *line, ...)
 
 
 	FD_ZERO(&wfds);
-	FD_SET(sd->sock, &wfds);
+	FD_SET(dnetGetSock(sd), &wfds);
 	tv.tv_sec = 10;
 	tv.tv_usec = 0;
-	sval = select(sd->sock+1, NULL, &wfds, NULL, &tv);
+	sval = select(dnetGetSock(sd)+1, NULL, &wfds, NULL, &tv);
 	if (sval == -1) {
 		smtpSetErr("writeResponse: select error");
 		bytes = ERROR;
@@ -571,7 +575,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 	fflush(stdout);
 #endif
 
-	dsbDestroy(data);
+	dsbClear(rbuf);
 	retval = readResponse(sd, rbuf);
 	if (retval != 235) {
 		if (retval != ERROR) {
@@ -656,6 +660,7 @@ int
 smtpStartTls(dsocket *sd)
 {
         int retval=SUCCESS;
+#ifdef HAVE_LIBSSL
         dstrbuf *sb=DSB_NEW;
 
 	printProgress("Starting TLS Communications...");
@@ -683,6 +688,9 @@ smtpStartTls(dsocket *sd)
 
 end:
         dsbDestroy(sb);
+#else
+	sd = sd;
+#endif
         return retval;
 }
 

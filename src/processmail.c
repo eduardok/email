@@ -160,6 +160,12 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 
 	/* Use TLS? */
 	use_tls = getConfValue("USE_TLS");
+#ifndef HAVE_LIBSSL
+	if (use_tls) {
+		warning("No SSL support compiled in. Disabling TLS.\n");
+		use_tls = NULL;
+	}
+#endif
 	if (use_tls && strcasecmp(use_tls, "true") == 0) {
 		if (smtpStartTls(sd) != ERROR) {
 			dnetUseTls(sd);
