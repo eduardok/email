@@ -204,7 +204,7 @@ main(int argc, char **argv)
 	int opt_index = 0;          /* for getopt */
 	char *cc_string = NULL;
 	char *bcc_string = NULL;
-	const char *opts = "f:n:a:p:oVedvtb?c:s:r:u:i:g:m:";
+	const char *opts = "f:n:a:p:oVedvtb?c:s:r:u:i:g:m:H:";
 
 	/* Set certian global options to NULL */
 	conf_file = NULL;
