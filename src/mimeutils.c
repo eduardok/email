@@ -106,10 +106,13 @@ mimeFiletype(const char *filename)
 			continue;
 		}
 		chomp(buf->str);
+
+		/* If we still have an allocated type, free it */
+		if (type) {
+			dsbDestroy(type);
+		}
 		type = getMimeType(buf->str);
 		if (type->len == 0) {
-			dsbDestroy(type);
-			type = NULL;
 			continue;
 		}
 		vec = explode(buf->str, " \t");
@@ -126,9 +129,6 @@ mimeFiletype(const char *filename)
 		if (found) {
 			/* Found it! */
 			break;
-		} else {
-			dsbDestroy(type);
-			type = NULL;
 		}
 	}
 
