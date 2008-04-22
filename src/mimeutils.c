@@ -107,7 +107,9 @@ mimeFiletype(const char *filename)
 		}
 		chomp(buf->str);
 		type = getMimeType(buf->str);
-		if (!type) {
+		if (type->len == 0) {
+			dsbDestroy(type);
+			type = NULL;
 			continue;
 		}
 		vec = explode(buf->str, " \t");
@@ -126,13 +128,16 @@ mimeFiletype(const char *filename)
 			break;
 		} else {
 			dsbDestroy(type);
+			type = NULL;
 		}
 	}
 
 exit:
 	dsbDestroy(filen);
 	dsbDestroy(buf);
-	fclose(file);
+	if (file) {
+		fclose(file);
+	}
 	if (!type) {
 		type = DSB_NEW;
 		dsbCopy(type, "application/unknown");
