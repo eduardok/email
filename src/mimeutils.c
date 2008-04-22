@@ -81,7 +81,7 @@ mimeFiletype(const char *filename)
 	int i=0, veclen=0;
 	dstrbuf *type=NULL;
 	dstrbuf *buf=DSB_NEW;
-	dvector tmpvec=NULL, vec=NULL;
+	dvector vec=NULL;
 	const char *ext=NULL;
 	dstrbuf *filen=NULL;
 	FILE *file = fopen(MAGIC_FILE, "r");
@@ -90,17 +90,15 @@ mimeFiletype(const char *filename)
 		goto exit;
 	}
 	filen = mimeFilename(filename);
-	tmpvec = explode(filen->str, ".");
-	dsbDestroy(filen);
-	if (!tmpvec) {
-		goto exit;
-	}
-	ext = tmpvec[1];
+	ext = strrchr(filen->str, '.');
+
 	/* If we don't know  the extension, we don't know what type
 	 * of file it's going to be. Therefore, skip all of this.  */
 	if (!ext) {
 		goto exit;
 	}
+	/* Get past . in extension name. */
+	ext++;
 
 	while (!feof(file)) {
 		dsbReadline(buf, file);
@@ -132,7 +130,7 @@ mimeFiletype(const char *filename)
 	}
 
 exit:
-	dvDestroy(tmpvec);
+	dsbDestroy(filen);
 	dsbDestroy(buf);
 	fclose(file);
 	if (!type) {
