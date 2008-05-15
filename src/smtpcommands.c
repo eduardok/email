@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <termios.h>
 
 #include <sys/select.h>
 #include <sys/ioctl.h>
