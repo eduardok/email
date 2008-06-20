@@ -51,14 +51,6 @@ readfile(dstrbuf *buf, FILE *file)
 	}
 	dsbDestroy(tmp);
 }
-		
-static void
-writeToTmpFile(const char *file, dstrbuf *buf)
-{
-	FILE *o = fopen(file, "w");
-	fwrite(buf->str, 1, buf->len, o);
-	fclose(o);
-}
 
 /**
  * Calls gpg with popen so that we may write to stdin 
@@ -91,10 +83,10 @@ dstrbuf *
 callGpg(dstrbuf *input, GpgCallType call_type)
 {
 	int retval;
-	FILE *retfile;
+	FILE *fdfile, *fdtmp;
 	char *gpg_bin, *gpg_pass;
-	char filename[L_tmpnam]={0};
-	char tmpfile[L_tmpnam]={0};
+	char filename[TMPFILE_TEMPLATE_SIZE]=TMPFILE_TEMPLATE;
+	char tmpfile[TMPFILE_TEMPLATE_SIZE]=TMPFILE_TEMPLATE;
 	dstrbuf *encto=NULL;
 	dstrbuf *gpg=NULL;
 	dstrbuf *cmd=NULL;
@@ -109,9 +101,9 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 
 	/* Get the first email from Mopts.to */
 	encto = getFirstEmail();
-	tmpnam(filename);
-	tmpnam(tmpfile);
-	writeToTmpFile(tmpfile, input);
+	fdfile = fdopen(mkstemp(filename), "r");
+	fdtmp = fdopen(mkstemp(tmpfile), "w");
+	fwrite(input->str, 1, input->len, fdtmp);
 
 	gpg = expandPath(gpg_bin);
 	cmd = DSB_NEW;
@@ -127,6 +119,7 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	dsbPrintf(cmd, " '%s'", tmpfile);
 	retval = execgpg(cmd->str, gpg_pass);
 	dsbDestroy(encto);
+	fclose(fdtmp);
 	unlink(tmpfile);
 
 	if (retval == -1) {
@@ -136,18 +129,11 @@ callGpg(dstrbuf *input, GpgCallType call_type)
 	}
 
 	dsbDestroy(gpg);
-	retfile = fopen(filename, "r");
-	if (!retfile) {
-		fatal("Gpg didn't provide any output. This is a possible bug.\n\t%s\n",
-			cmd->str);
-		dsbDestroy(cmd);
-		return NULL;
-	}
-
 	dsbDestroy(cmd);
+
 	buf = DSB_NEW;
-	readfile(buf, retfile);
-	fclose(retfile);
+	readfile(buf, fdfile);
+	fclose(fdfile);
 	unlink(filename);
 	return buf;
 }

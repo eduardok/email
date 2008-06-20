@@ -131,20 +131,21 @@ openEditor(const char *editor, const char *filename)
 }
 
 static dstrbuf *
-getFileContents(const char *file)
+getFileContents(int fd)
 {
-	dstrbuf *buf=NULL;
-	FILE *in = fopen(file, "r");
-	size_t fsize=filesize(file);
+	dstrbuf *tmp=NULL, *buf=NULL;
+	FILE *in = fdopen(fd, "r");
 
 	if (!in) {
 		return NULL;
 	}
 	buf = DSB_NEW;
-	if (dsbFread(buf, fsize, in) != fsize) {
-		dsbDestroy(buf);
-		buf=NULL;
+	tmp = DSB_NEW;
+	while (!feof(in)) {
+		dsbReadline(tmp, in);
+		dsbCat(buf, tmp->str);
 	}
+	dsbDestroy(tmp);
 	fclose(in);
 	return buf;
 }
@@ -157,12 +158,13 @@ getFileContents(const char *file)
 dstrbuf *
 editEmail(void)
 {
+	int fd=0;
 	char *editor;
 	char *sig_file = NULL;
 	dstrbuf *fpath=NULL;
 	dstrbuf *buf=NULL;
 	size_t fsize=0;
-	char filename[L_tmpnam]={0};
+	char filename[TMPFILE_TEMPLATE_SIZE]=TMPFILE_TEMPLATE;
 
 	assert(filename != NULL);
 
@@ -171,7 +173,11 @@ editEmail(void)
 		editor = "vi";
 	}
 
-	tmpnam(filename);
+	fd = mkstemp(filename);
+	if (fd < 0) {
+		fatal("Could not create temp file for editor: %s", filename);
+		properExit(ERROR);
+	}
 	if (openEditor(editor, filename) < 0) {
 		warning("Error when trying to open editor '%s'", editor);
 	}
@@ -184,7 +190,7 @@ editEmail(void)
 			properExit(EASY);
 		}
 	}
-	buf = getFileContents(filename);
+	buf = getFileContents(fd); // closes fd
 	unlink(filename);
 
 	/* If they specified a signature file, let's append it */
