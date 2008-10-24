@@ -77,6 +77,7 @@ static struct option Gopts[] = {
 	{"header", 1, 0, 'H'},
 	{"to-name", 1, 0, 5},
 	{"tls", 0, 0, 6},
+	{"timeout", 1, 0, 'x'},
 	{NULL, 0, NULL, 0 }
 };
 
@@ -103,6 +104,7 @@ usage(void)
 	    "    -a, -attach file          Attach file and base64 encode\n"
 	    "    -c, -conf-file file       Path to non-default configuration file\n"
 	    "    -t, -check-config         Simply parse the email.conf file for errors\n"
+	    "    -x, -timeout              Set socket timeout.\n"
 	    "        -cc email,email,...   Copy recipients\n"
 	    "        -bcc email,email,...  Blind Copy recipients\n"
 	    "        -sign                 Sign the email with GPG\n"
@@ -204,7 +206,7 @@ main(int argc, char **argv)
 	int opt_index = 0;          /* for getopt */
 	char *cc_string = NULL;
 	char *bcc_string = NULL;
-	const char *opts = "f:n:a:p:oVedvtb?c:s:r:u:i:g:m:H:";
+	const char *opts = "f:n:a:p:oVedvtb?c:s:r:u:i:g:m:H:x:";
 
 	/* Set certian global options to NULL */
 	conf_file = NULL;
@@ -297,6 +299,9 @@ main(int argc, char **argv)
 				Mopts.headers = dlInit(defaultDestr);
 			}
 			dlInsertTop(Mopts.headers, xstrdup(optarg));
+			break;
+		case 'x':
+			setConfValue("TIMEOUT", xstrdup(optarg));
 			break;
 		case '?':
 			usage();

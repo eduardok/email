@@ -91,10 +91,15 @@ readResponse(dsocket *sd, dstrbuf *buf)
 	dstrbuf *tmpbuf = DSB_NEW;
 	struct timeval tv;
 	fd_set rfds;
+	char *timeout = getConfValue("TIMEOUT");
 
 	FD_ZERO(&rfds);
 	FD_SET(dnetGetSock(sd), &rfds);
-	tv.tv_sec = 10;
+	if (timeout) {
+		tv.tv_sec = atoi(timeout);
+	} else {
+		tv.tv_sec = 10;
+	}
 	tv.tv_usec = 0;
 	(void) select(dnetGetSock(sd)+1, &rfds, NULL, NULL, &tv);
 	if (FD_ISSET(dnetGetSock(sd), &rfds)) {
@@ -131,6 +136,7 @@ writeResponse(dsocket *sd, char *line, ...)
 	struct timeval tv;
 	fd_set wfds;
 	char *buf = xmalloc(size+1);
+	char *timeout = getConfValue("TIMEOUT");
 
 	while (true) {
 		va_start(vp, line);
@@ -152,7 +158,11 @@ writeResponse(dsocket *sd, char *line, ...)
 
 	FD_ZERO(&wfds);
 	FD_SET(dnetGetSock(sd), &wfds);
-	tv.tv_sec = 10;
+	if (timeout) {
+		tv.tv_sec = atoi(timeout);
+	} else {
+		tv.tv_sec = 10;
+	}
 	tv.tv_usec = 0;
 	sval = select(dnetGetSock(sd)+1, NULL, &wfds, NULL, &tv);
 	if (sval == -1) {
