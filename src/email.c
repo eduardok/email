@@ -338,6 +338,16 @@ main(int argc, char **argv)
 
 	configure();
 
+	/* Check to see if we need to attach a vcard. */
+	if (getConfValue("VCARD")) {
+		dstrbuf *vcard = expandPath(getConfValue("VCARD"));
+		if (!Mopts.attach) {
+			Mopts.attach = dlInit(defaultDestr);
+		}
+		dlInsertTop(Mopts.attach, xstrdup(vcard->str));
+		dsbDestroy(vcard);
+	}
+
 	/* set to addresses if argc is > 1 */
 	if (!(Mopts.to = getNames(argv[optind]))) {
 		fatal("You must specify at least one recipient!\n");

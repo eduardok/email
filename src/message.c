@@ -315,7 +315,9 @@ makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 	}
 	dsbPrintf(out, "%s\r\n", in->str);
 	if (Mopts.attach) {
-		attachFiles(border, out);
+		if (attachFiles(border, out) == ERROR) {
+			return ERROR;
+		}
 		dsbPrintf(out, "\r\n\r\n--%s--\r\n", border);
 	}
 	return 0;
@@ -494,8 +496,7 @@ createMail(void)
 	}
 
 	if (!global_msg) {
-		global_msg = DSB_NEW;
-		dsbCopy(global_msg, msg->str);
+		dsbDestroy(msg);
 		properExit(ERROR);
 	}
 

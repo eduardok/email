@@ -713,6 +713,7 @@ text/x-tcl					tcl tk
 text/x-tex					tex ltx sty cls
 text/x-vcalendar				vcs
 text/x-vcard					vcf
+text/x-ldif					ldif
 
 video/3gpp					3gp
 video/dl					dl
@@ -746,3 +747,4 @@ x-conference/x-cooltalk				ice
 
 x-epoc/x-sisx-app				sisx
 x-world/x-vrml					vrm vrml wrl
+

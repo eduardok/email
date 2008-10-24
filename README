@@ -67,6 +67,7 @@ A:  Well, first thing you should do, is configure this email client.
    13: SMTP_AUTH_USER:     Your SMTP AUTH username
    14: SMTP_AUTH_PASS:     Your SMTP AUTH Password
    15: USE_TLS             Boolean (true/false) to use TLS/SSL
+   16: VCARD               Specify a vcard to attach to each message
 
     SMTP_SERVER can be either a remote SMTP servers fully qualified domain name, or
     an IP address.  You may also opt to use 'sendmail' internally instead of sending

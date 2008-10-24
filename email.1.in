@@ -262,6 +262,7 @@ listed below.
   SMTP_AUTH_USER    : Specify a username login for SMTP AUTH
   SMTP_AUTH_PASS    : Specify a password for SMTP AUTH
   USE_TLS           : Boolean (true/false) if you want to use TLS/SSL
+  VCARD             : Specify a vcard to attach to each message.
 .br
 
 You can choose to use sendmail instead of a remote smtp

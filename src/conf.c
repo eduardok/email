@@ -59,7 +59,8 @@ static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"SMTP_AUTH",
 	"USE_TLS",
 	"SMTP_AUTH_USER",
-	"SMTP_AUTH_PASS"
+	"SMTP_AUTH_PASS",
+	"VCARD"
 };
 
 static char dep_conf_vars[MAX_DEP_CONF_VARS][MAXBUF] = {
@@ -283,18 +284,28 @@ getSystemEmail(void)
  * Figure out where the config is located and open it.
  */
 FILE *
-openConfig(void)
+openConfig(bool check)
 {
 	FILE *config=NULL;
+	char *file=NULL;
 	if (conf_file == NULL) {
 		dstrbuf *hconfig = expandPath("~/.email.conf");
 		config = fopen(hconfig->str, "r");
-		dsbDestroy(hconfig);
 		if (!config) {
 			config = fopen(MAIN_CONFIG, "r");
+			file = MAIN_CONFIG;
+		} else {
+			file = hconfig->str;
 		}
+		if (check) {
+			printf("-- Opened config %s\n", file);
+		}
+		dsbDestroy(hconfig);
 	} else {
 		config = fopen(conf_file, "r");
+		if (check) {
+			printf("-- Opened config %s\n", conf_file);
+		}
 	}
 	return config;
 }
@@ -308,7 +319,7 @@ void
 checkConfig(void)
 {
 	int line = 0;
-	FILE *config = openConfig();
+	FILE *config = openConfig(true);
 
 	/* Couldn't open any possible configuration file */
 	if (!config) {
@@ -335,7 +346,7 @@ void
 configure(void)
 {
 	int line = 0;
-	FILE *config = openConfig();
+	FILE *config = openConfig(false);
 
 	/**
 	* smtp server can be overwitten by command line option -r
