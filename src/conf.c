@@ -104,7 +104,11 @@ hashit(const char *var, const char *val)
 		/* Something went wrong */
 		return ERROR;
 	}
-	setConfValue(var, xstrdup(val));
+
+	/* Don't store if there is something already there. */
+	if (!getConfValue(var)) {
+		setConfValue(var, xstrdup(val));
+	}
 	return 0;
 }
 

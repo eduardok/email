@@ -145,6 +145,9 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 	}
 
 	bar = prbarInit(msg->len);
+	if (Mopts.verbose) {
+		printf("Connecting to %s:%d\n", smtp_serv, smtp_port);
+	}
 	sd = dnetConnect(smtp_serv, smtp_port);
 	if (sd == NULL) {
 		fatal("Could not connect to server: %s on port: %d", 

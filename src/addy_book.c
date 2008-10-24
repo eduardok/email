@@ -294,8 +294,8 @@ insertAddrEntry(dlist to, const char *addr)
 	if (parseAddr(addr, name, email) == ERROR) {
 		warning("Email address %s is incorrectly formatted. Skipping...\n", addr);
 	} else {
-		stripEmailName(name->str);
-		insertEntry(to, name->str, email->str);
+		char *stripped = stripEmailName(name->str);
+		insertEntry(to, stripped, email->str);
 	}
 	dsbDestroy(name);
 	dsbDestroy(email);

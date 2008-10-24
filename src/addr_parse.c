@@ -33,33 +33,6 @@
 #include "email.h"
 #include "utils.h"
 
-/**
- * Parses a given address to separate the name from the address.
- */
-int
-parseAddr(const char *addr, dstrbuf *ret_name, dstrbuf *ret_addr)
-{
-	int retval = 0;
-	dstrbuf *copy = DSB_NEW;
-	dsbCopy(copy, addr);
-
-	/* If there is a formatted email address, break it up */
-	if (strchr(copy->str, '<') && copy->str[0] != '<') {
-		char *tok = strtok(copy->str, "<");
-		dsbCopy(ret_name, tok);
-		tok = strtok(NULL, "<");
-		tok = strtok(tok, ">");
-		if (tok == NULL) {
-			retval = ERROR;
-			goto end;
-		} else {
-			dsbCopy(ret_addr, tok);
-		}
-	}
-end:
-	dsbDestroy(copy);
-	return retval;
-}
 
 /**
  * strip any quotes from the begining and end of the
@@ -115,6 +88,38 @@ stripEmailAddr(char *str)
 		str++;
 	}
 	return str;
+}
+
+/**
+ * Parses a given address to separate the name from the address.
+ */
+int
+parseAddr(const char *addr, dstrbuf *ret_name, dstrbuf *ret_addr)
+{
+	int retval = 0;
+	dstrbuf *copy = DSB_NEW;
+	dsbCopy(copy, addr);
+
+	/* If there is a formatted email address, break it up */
+	if (strchr(copy->str, '<') && copy->str[0] != '<') {
+		char *tok = strtok(copy->str, "<");
+		dsbCopy(ret_name, tok);
+		tok = strtok(NULL, "<");
+		tok = strtok(tok, ">");
+		if (tok == NULL) {
+			retval = ERROR;
+			goto end;
+		} else {
+			dsbCopy(ret_addr, tok);
+		}
+	} else {
+		/* it's just a regular addr (no name) */
+		char *stripped = stripEmailAddr(copy->str);
+		dsbCopy(ret_addr, stripped);
+	}
+end:
+	dsbDestroy(copy);
+	return retval;
 }
 
 /** 
