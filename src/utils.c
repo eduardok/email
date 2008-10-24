@@ -177,7 +177,7 @@ randomString(size_t size)
 
 	for (i=0; i < size; i++) {
 		randval = rand() / (RAND_MAX / SIZEOF_LETTERS);
-		dsbnCat(ret, &letters[randval], 1);
+		dsbCatChar(ret, letters[randval]);
 	}
 	return ret;
 }
@@ -271,7 +271,7 @@ copyUpTo(dstrbuf *buf, int stop, FILE *in)
 		if (ch == stop) {
 			return ch;
 		}
-		dsbnCat(buf, (char *)&ch, 1);
+		dsbCatChar(buf, ch);
 	}
 	return ch;
 }

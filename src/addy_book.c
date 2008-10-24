@@ -181,7 +181,7 @@ getEntry(ENTRY *en, char *ent, FILE *book)
 				ch = fgetc(book);
 			}
 			if (ch != '\n') {
-				dsbnCat(ptr, (char *)&ch, 1);
+				dsbCatChar(ptr, ch);
 			}
 			line++;
 			ch = 0;
@@ -225,7 +225,7 @@ getEntry(ENTRY *en, char *ent, FILE *book)
 			/* Handle newlines below */
 			break;
 		default:
-			dsbnCat(ptr, (char *)&ch, 1);
+			dsbCatChar(ptr, ch);
 			break;
 		}
 

@@ -229,11 +229,11 @@ appendSig(dstrbuf *app, const char *sigfile)
 				appendFortune(app);
 				break;
 			default:
-				dsbnCat(app, (char *)&next_char, 1);
+				dsbCatChar(app, next_char);
 				break;
 			}
 		} else {
-			dsbnCat(app, (char *)&next_char, 1);
+			dsbCatChar(app, next_char);
 		}
 	}
 

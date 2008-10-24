@@ -139,7 +139,7 @@ readConfig(FILE *in)
 				ch = fgetc(in);
 			}
 			if (ch != '\n') {
-				dsbnCat(ptr, (char *)&ch, 1);
+				dsbCatChar(ptr, ch);
 			}
 			line++;
 			/* If this char is a newline, 
@@ -184,7 +184,7 @@ readConfig(FILE *in)
 			/* Handle Newlines below */
 			break;
 		default:
-			dsbnCat(ptr, (char *)&ch, 1);
+			dsbCatChar(ptr, ch);
 			break;
 		}
 
