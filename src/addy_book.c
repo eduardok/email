@@ -78,6 +78,7 @@ addrDestr(void *ptr)
 		xfree(a);
 	}
 }
+
 	
 /** 
  * Seperate will take a string of command separated fields
@@ -261,6 +262,7 @@ exit:
 	return ch;
 }
 
+
 /**
  * Add an email to the list.  Make sure it is formated properly.
  * After formated properly, list_insert() it 
@@ -273,9 +275,30 @@ insertEntry(dlist to, const char *name, const char *addr)
 		warning("Email address '%s' is invalid. Skipping...\n", addr);
 		return;
 	}
-	newaddr->name = xstrdup(name);
+	if (*name != '\0' && strcmp(name, "") != 0) { 
+		newaddr->name = xstrdup(name);
+	}
 	newaddr->email = xstrdup(addr);
 	dlInsertTop(to, newaddr);
+}
+
+/**
+ * A wrapper for insertEntry for when we seem to have just an address 
+ * (ie not an address book entry.)
+ */
+static void
+insertAddrEntry(dlist to, const char *addr)
+{
+	dstrbuf *name = DSB_NEW;
+	dstrbuf *email = DSB_NEW;
+	if (parseAddr(addr, name, email) == ERROR) {
+		warning("Email address %s is incorrectly formatted. Skipping...\n", addr);
+	} else {
+		stripEmailName(name->str);
+		insertEntry(to, name->str, email->str);
+	}
+	dsbDestroy(name);
+	dsbDestroy(email);
 }
 
 /**
@@ -287,7 +310,7 @@ checkAndCopy(dlist to, dlist from)
 {
 	char *next=NULL;
 	while ((next=(char *)dlGetNext(from)) != NULL) {
-		insertEntry(to, NULL, next);
+		insertAddrEntry(to, next);
 	}
 }
 
@@ -313,7 +336,7 @@ checkAddrBook(dlist to, dlist from, FILE *book)
 			fatal("Address book incorrectly formated on line %d\n", retval);
 			return ERROR;
 		} else if (retval == EOF) {
-			insertEntry(to, NULL, next);
+			insertAddrEntry(to, next);
 		} else {
 			if (addEntry(to, &en, book) == ERROR) {
 				return ERROR;

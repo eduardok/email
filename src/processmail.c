@@ -114,7 +114,7 @@ int
 processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 {
 	dsocket *sd;
-	int retval, bytes;
+	int retval=0, bytes;
 	char *smtp_auth=NULL;
 	char *email_addr=NULL;
 	char *use_tls=NULL;
@@ -236,12 +236,14 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 		}
 		ptr += bytes;
 	}
-	smtpEndData(sd);
-	smtpQuit(sd);
+	retval = smtpEndData(sd);
+	if (retval != ERROR) {
+		retval = smtpQuit(sd);
+	}
 
 end:
 	prbarDestroy(bar);
 	dnetClose(sd);
-	return TRUE;
+	return retval;
 }
 

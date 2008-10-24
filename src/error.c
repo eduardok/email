@@ -33,9 +33,9 @@
 #include "error.h"
 
 /**
- * Fatal will take a string for explination and try to 
- * run perror for an in depth explination of the error, 
- * and elso call Exit(ERROR)
+ * Simply provide an fatal error message to stderr
+ * We don't exit inside of this function because cleanup may 
+ * need to happen so we allow the caller to handle the exit.
 **/
 void
 fatal(const char *message, ...)

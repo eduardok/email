@@ -159,6 +159,8 @@ prbarPrint(size_t bytes, struct prbar *bar)
 	* only update the progress bar when
 	* the size of the file sent is greater
 	* than BAR_REFRESH  or if we're at 100%
+	*
+	* RETHINK: Um, what the hell did I mean here??
 	**/
 	if ((bar->percent != 100) && 
 		((bar->curr_size - bar->progress) <= BAR_REFRESH)) {
@@ -172,6 +174,9 @@ prbarPrint(size_t bytes, struct prbar *bar)
 	printf("\rSending  \"%s\"  |%s| %3d%% of %2d %s",
 		bar->subject, bar->buf, bar->percent, 
 		bar->truncated_file_size, bar->size_type);
+	if (bar->percent == 100) {
+		printf("\n");
+	}
 	fflush(stdout);
 }
 
