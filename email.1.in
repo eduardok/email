@@ -203,6 +203,13 @@ An example of a header string would look like:
 --header "X-My-Header: Stuff goes here"
 
 .TP
+.B \-\-timeout secs, \-x secs
+Set a timeout (in seconds) on the socket. This is
+helpful if you would like to have the client stop
+trying to send/recv data from the SMTP server if
+it hangs after a period of time.
+
+.TP
 .B \-\-high-priority , \-o
 This options allows you to take advantage of using
 the priority option used by some email clients.

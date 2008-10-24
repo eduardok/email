@@ -398,3 +398,16 @@ EOH
 
 EOH
 
+######
+# Timeout
+######
+
+--timeout|-timeout|-x
+
+--timeout secs, -x secs
+
+  Specify a timeout period for sending/receiving on a socket. This is
+  helpful if you'd like the client to stop trying to send and receive
+  on a server that has stopped responding.
+
+EOH
