@@ -38,8 +38,8 @@
 #define FALSE   0
 #define EASY    100
 
-#define TMPFILE_TEMPLATE "/tmp/emailXXXXXX"
-#define TMPFILE_TEMPLATE_SIZE 17
+#define TMPFILE_TEMPLATE ".email.msg.XXXXXX"
+#define TMPFILE_TEMPLATE_SIZE 18
 
 /* EMAIL_DIR determined at compile time */
 #define MAIN_CONFIG  EMAIL_DIR"/email.conf"

@@ -138,7 +138,13 @@ formatEmailAddr(char *name, char *address)
 	proper_addr = stripEmailAddr(address);
 	if (name) {
 		proper_name = stripEmailName(name);
-		dsbPrintf(ret, "\"%s\" <%s>", proper_name, proper_addr);
+		if (isUtf8((u_char *)proper_name)) {
+			dstrbuf *dsb = encodeUtf8String((u_char *)proper_name);
+			dsbPrintf(ret, "\"%s\" <%s>", dsb->str, proper_addr);
+			dsbDestroy(dsb);
+		} else {
+			dsbPrintf(ret, "\"%s\" <%s>", proper_name, proper_addr);
+		}
 	} else {
 		dsbPrintf(ret, "<%s>", proper_addr);
 	}

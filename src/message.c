@@ -221,7 +221,13 @@ printHeaders(const char *border, dstrbuf *msg)
 	reply_to = getConfValue("REPLY_TO");
 
 	if (Mopts.subject) {
-		dsbPrintf(msg, "Subject: %s\r\n", Mopts.subject);
+		if (isUtf8((u_char *)Mopts.subject)) {
+			dstrbuf *dsb = encodeUtf8String((u_char *)Mopts.subject);
+			dsbPrintf(msg, "Subject: %s\r\n", dsb->str);
+			dsbDestroy(dsb);
+		} else {
+			dsbPrintf(msg, "Subject: %s\r\n", Mopts.subject);
+		}
 	}
 	printFromHeaders(user_name, email_addr, msg);
 	printToHeaders(Mopts.to, Mopts.cc, msg);

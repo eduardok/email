@@ -40,7 +40,6 @@
 #include "error.h"
 
 #define MAX_CONF_VARS 20
-#define MAX_DEP_CONF_VARS 1
 
 /* There are the variables accepted in the configuration file */
 static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
@@ -63,10 +62,6 @@ static char conf_vars[MAX_CONF_VARS][MAXBUF] = {
 	"VCARD"
 };
 
-static char dep_conf_vars[MAX_DEP_CONF_VARS][MAXBUF] = {
-	"SIGNATURE_DIVIDER"
-};
-
 /**
  * Make sure that var is part of a possible 
  * configuration variable in the configure file
@@ -81,12 +76,14 @@ checkVar(dstrbuf *var)
 			return 0;
 		}
 	}
+	/*
 	for (i=0; i < MAX_DEP_CONF_VARS; i++) {
 		if (strcasecmp(var->str, dep_conf_vars[i]) == 0) {
 			warning("Deprecated variable: %s\n", var->str);
 			return 0;
 		}
 	}
+	*/
 	return -1;
 }
 

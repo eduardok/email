@@ -51,6 +51,47 @@
 #include "email.h"
 #include "utils.h"
 #include "error.h"
+#include "mimeutils.h"
+
+bool
+isUtf8(const u_char *str)
+{
+	bool is_utf8 = false;
+
+	/* If greater than 0x7F (127) then it's not normal ASCII */
+	if (*str > 0x7F) {
+		u_char fbyte = str[0];
+		u_char sbyte = str[1];
+		/* If the first char is between 0xC0 (192) and 0xFD (253) 
+		   and the second byte is between 0x80 (128) and 0xBF (191)
+		   it's utf8 encoding. */
+		if ((fbyte >= 0xC0 && fbyte <= 0xFD) && 
+			(sbyte >= 0x80 && sbyte <= 0xBF)) {
+			is_utf8 = true;
+		}
+	}
+	return is_utf8;
+}
+
+dstrbuf *
+encodeUtf8String(const u_char *str)
+{
+	u_int i=0;
+	const u_int max_blk_len = 45;
+	dstrbuf *dsb = DSB_NEW;
+	size_t len = strlen((char *)str);
+
+	dstrbuf *enc = mimeB64EncodeString(str, (len > max_blk_len ? max_blk_len : len));
+	dsbPrintf(dsb, "=?utf-8?b?%s?=", enc->str);
+	dsbDestroy(enc);
+	for (i=max_blk_len; i < len; i += max_blk_len) {
+		size_t newlen = strlen((char *)str + i);
+		enc = mimeB64EncodeString(str, (newlen > max_blk_len ? max_blk_len : newlen));
+		dsbPrintf(dsb, "\r\n =?utf-8?b?%s?=", enc->str);
+		dsbDestroy(enc);
+	}
+	return dsb;
+}
 
 /**
  * takes a string that is a supposed file path, and 

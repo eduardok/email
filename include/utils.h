@@ -34,5 +34,7 @@ dstrbuf *getFirstEmail(void);
 void properExit(int sig);
 void chomp(char *str);
 int copyUpTo(dstrbuf *buf, int stop, FILE *in);
+bool isUtf8(const u_char *str);
+dstrbuf *encodeUtf8String(const u_char *str);
 
 #endif /* __UTILS_H */
