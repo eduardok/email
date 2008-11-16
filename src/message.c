@@ -65,7 +65,7 @@
  * damn functions and get a great idea
 **/
 static void
-printMimeHeaders(const char *b, dstrbuf *msg)
+printMimeHeaders(dstrbuf *data, const char *b, dstrbuf *msg)
 {
 	if (Mopts.gpg_opts & GPG_ENC) {
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
@@ -81,7 +81,12 @@ printMimeHeaders(const char *b, dstrbuf *msg)
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/mixed; boundary=\"%s\"\r\n", b);
 	} else {
-		if (Mopts.html) {
+		if (isUtf8((u_char *)data->str)) {
+			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
+			dsbPrintf(msg, "Content-Type: text/plain; charset=utf-8\r\n");
+			dsbPrintf(msg, "Content-Transfer-Encoding: base64\r\n");
+			dsbPrintf(msg, "Content-Disposition: inline\r\n");
+		} else if (Mopts.html) {
 			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 			dsbPrintf(msg, "Content-Type: text/html\r\n");
 		} else {
@@ -206,7 +211,7 @@ printExtraHeaders(dlist headers, dstrbuf *msg)
  * that were specified at the command line.
 **/
 static void
-printHeaders(const char *border, dstrbuf *msg)
+printHeaders(dstrbuf *data, const char *border, dstrbuf *msg)
 {
 	char *user_name = getConfValue("MY_NAME");
 	char *email_addr = getConfValue("MY_EMAIL");
@@ -242,7 +247,7 @@ printHeaders(const char *border, dstrbuf *msg)
 	if (reply_to) {
 		dsbPrintf(msg, "Reply-To: <%s>\r\n", reply_to);
 	}
-	printMimeHeaders(border, msg);
+	printMimeHeaders(data, border, msg);
 	dsbPrintf(msg, "X-Mailer: Cleancode.email v%s \r\n", EMAIL_VERSION);
 	if (Mopts.priority) {
 		dsbPrintf(msg, "X-Priority: 1\r\n");
@@ -305,21 +310,39 @@ attachFiles(const char *boundary, dstrbuf *out)
 static int
 makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 {
+	dstrbuf *enc=NULL;
 	if (Mopts.attach) {
 		dsbPrintf(out, "--%s\r\n", border);
-		if (Mopts.html) {
+		if (isUtf8((u_char *)in->str)) {
+			dsbPrintf(out, "Content-Type: text/plain; charset=utf-8\r\n");
+			dsbPrintf(out, "Content-Transfer-Encoding: base64\r\n");
+			dsbPrintf(out, "Content-Disposition: inline\r\n\r\n");
+			enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+		} else if (Mopts.html) {
 			dsbPrintf(out, "Content-Type: text/html\r\n\r\n");
+			enc = DSB_NEW;
+			dsbCat(enc, in->str);
 		} else {
 			dsbPrintf(out, "Content-Type: text/plain\r\n\r\n");
+			enc = DSB_NEW;
+			dsbCat(enc, in->str);
+		}
+	} else {
+		if (isUtf8((u_char *)in->str)) {
+			enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+		} else {
+			enc = DSB_NEW;
+			dsbCat(enc, in->str);
 		}
 	}
-	dsbPrintf(out, "%s\r\n", in->str);
+	dsbPrintf(out, "%s\r\n", enc->str);
 	if (Mopts.attach) {
 		if (attachFiles(border, out) == ERROR) {
 			return ERROR;
 		}
 		dsbPrintf(out, "\r\n\r\n--%s--\r\n", border);
 	}
+	dsbDestroy(enc);
 	return 0;
 }
 
@@ -391,7 +414,7 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 		buf=NULL;
 		goto end;
 	}
-	printHeaders(border1->str, buf);
+	printHeaders(msg, border1->str, buf);
 
 	dsbPrintf(buf, "\r\n--%s\r\n", border1->str);
 	if (gpg_type & GPG_ENC) {
@@ -436,7 +459,7 @@ createPlainEmail(dstrbuf *msg)
 		border = DSB_NEW;
 	}
 
-	printHeaders(border->str, buf);
+	printHeaders(msg, border->str, buf);
 	if (makeMessage(msg, buf, border->str) < 0) {
 		dsbDestroy(buf);
 		buf=NULL;

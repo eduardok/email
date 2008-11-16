@@ -230,9 +230,9 @@ mimeB64EncodeFile(FILE *infile, dstrbuf *outbuf)
  * Encode a string into base64.
  */
 dstrbuf *
-mimeB64EncodeString(const u_char *inbuf, size_t len)
+mimeB64EncodeString(const u_char *inbuf, size_t len, bool maxline)
 {
-	u_int i=0, j=0, blk_size=0;
+	u_int i=0, j=0, blk_size=0, blocksout=0;
 	dstrbuf *retbuf = dsbNew(100);
 	u_char block[3], encblock[4];
 
@@ -249,6 +249,11 @@ mimeB64EncodeString(const u_char *inbuf, size_t len)
 		}
 		mimeB64EncodeBlock(block, encblock, blk_size);
 		dsbnCat(retbuf, (char *)encblock, 4);
+		blocksout++;
+		if (maxline && (blocksout >= (MAX_B64_LINE / 4) || i == len)) {
+			dsbPrintf(retbuf, "\r\n");
+			blocksout = 0;
+		}
 	}
 	return retbuf;
 }

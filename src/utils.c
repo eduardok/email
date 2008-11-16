@@ -81,7 +81,8 @@ encodeUtf8String(const u_char *str)
 	dstrbuf *dsb = DSB_NEW;
 	size_t len = strlen((char *)str);
 
-	dstrbuf *enc = mimeB64EncodeString(str, (len > max_blk_len ? max_blk_len : len));
+	dstrbuf *enc = mimeB64EncodeString(str, 
+		(len > max_blk_len ? max_blk_len : len), false);
 	dsbPrintf(dsb, "=?utf-8?b?%s?=", enc->str);
 	dsbDestroy(enc);
 
@@ -93,7 +94,7 @@ encodeUtf8String(const u_char *str)
 		if (newlen > max_blk_len) {
 			newlen = max_blk_len;
 		}
-		enc = mimeB64EncodeString(str + i, newlen);
+		enc = mimeB64EncodeString(str + i, newlen, false);
 		dsbPrintf(dsb, "\r\n =?utf-8?b?%s?=", enc->str);
 		dsbDestroy(enc);
 		i += newlen;

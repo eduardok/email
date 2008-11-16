@@ -479,7 +479,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 	dstrbuf *data;
 	dstrbuf *rbuf = DSB_NEW;
 
-	data = mimeB64EncodeString((u_char *)user, strlen(user));
+	data = mimeB64EncodeString((u_char *)user, strlen(user), false);
 	if (writeResponse(sd, "AUTH LOGIN %s\r\n", data->str) < 0) {
 		smtpSetErr("Socket write error: smtp_auth_login");
 		retval = ERROR;
@@ -507,7 +507,7 @@ smtpAuthLogin(dsocket *sd, const char *user, const char *pass)
 
 	/* Encode the password */
 	dsbDestroy(data);
-	data = mimeB64EncodeString((u_char *)pass, strlen(pass));
+	data = mimeB64EncodeString((u_char *)pass, strlen(pass), false);
 	if (writeResponse(sd, "%s\r\n", data->str) < 0) {
 		smtpSetErr("Socket write error: smtp_auth_login");
 		retval = ERROR;
@@ -574,7 +574,7 @@ smtpAuthPlain(dsocket *sd, const char *user, const char *pass)
 #endif
 
 	dsbPrintf(up, "%c%s%c%s", '\0', user, '\0', pass);
-	data = mimeB64EncodeString((u_char *)up->str, up->len);
+	data = mimeB64EncodeString((u_char *)up->str, up->len, false);
 	if (writeResponse(sd, "%s\r\n", data->str) < 0) {
 		smtpSetErr("Socket write error: smtp_auth_plain");
 		retval = ERROR;
