@@ -208,17 +208,11 @@ printExtraHeaders(dlist headers, dstrbuf *msg)
 static void
 printHeaders(const char *border, dstrbuf *msg)
 {
-	char *sm_bin = NULL;
-	char *smtp_serv = NULL;
-	char *reply_to = NULL;
-	char *user_name = NULL;
-	char *email_addr = NULL;
-
-	user_name = getConfValue("MY_NAME");
-	email_addr = getConfValue("MY_EMAIL");
-	sm_bin = getConfValue("SENDMAIL_BIN");
-	smtp_serv = getConfValue("SMTP_SERVER");
-	reply_to = getConfValue("REPLY_TO");
+	char *user_name = getConfValue("MY_NAME");
+	char *email_addr = getConfValue("MY_EMAIL");
+	char *sm_bin = getConfValue("SENDMAIL_BIN");
+	char *smtp_serv = getConfValue("SMTP_SERVER");
+	char *reply_to = getConfValue("REPLY_TO");
 
 	if (Mopts.subject) {
 		if (isUtf8((u_char *)Mopts.subject)) {

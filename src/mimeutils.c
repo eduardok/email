@@ -232,20 +232,23 @@ mimeB64EncodeFile(FILE *infile, dstrbuf *outbuf)
 dstrbuf *
 mimeB64EncodeString(const u_char *inbuf, size_t len)
 {
+	u_int i=0, j=0, blk_size=0;
 	dstrbuf *retbuf = dsbNew(100);
-	u_char encblock[5] = {0};
+	u_char block[3], encblock[4];
 
-	while (len) {
-		if (len > 3) {
-			mimeB64EncodeBlock(inbuf, encblock, 3);
-			inbuf += 3;
-			len -= 3;
+	/* Loop through the entire string encoding 3 8-bit chunks. */
+	while (i < len) {
+		blk_size = 0;
+		for (j=0; j < 3; j++) {
+			if (i < len) {
+				block[j] = inbuf[i++];
+				blk_size++;
+			} else {
+				block[j] = 0;
+			}
 		}
-		else {
-			mimeB64EncodeBlock(inbuf, encblock, len);
-			len -= len;
-		}
-		dsbCat(retbuf, (char *)encblock);
+		mimeB64EncodeBlock(block, encblock, blk_size);
+		dsbnCat(retbuf, (char *)encblock, 4);
 	}
 	return retbuf;
 }

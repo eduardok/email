@@ -76,19 +76,27 @@ isUtf8(const u_char *str)
 dstrbuf *
 encodeUtf8String(const u_char *str)
 {
-	u_int i=0;
 	const u_int max_blk_len = 45;
+	u_int i=max_blk_len;
 	dstrbuf *dsb = DSB_NEW;
 	size_t len = strlen((char *)str);
 
 	dstrbuf *enc = mimeB64EncodeString(str, (len > max_blk_len ? max_blk_len : len));
 	dsbPrintf(dsb, "=?utf-8?b?%s?=", enc->str);
 	dsbDestroy(enc);
-	for (i=max_blk_len; i < len; i += max_blk_len) {
+
+	/* If we have anymore data to encode, we have to do it by adding a newline
+	   plus a space because each section can only be 75 chars long. */ 
+	while (i < len) {
 		size_t newlen = strlen((char *)str + i);
-		enc = mimeB64EncodeString(str, (newlen > max_blk_len ? max_blk_len : newlen));
+		/* only allow max_blk_len sections */
+		if (newlen > max_blk_len) {
+			newlen = max_blk_len;
+		}
+		enc = mimeB64EncodeString(str + i, newlen);
 		dsbPrintf(dsb, "\r\n =?utf-8?b?%s?=", enc->str);
 		dsbDestroy(enc);
+		i += newlen;
 	}
 	return dsb;
 }
