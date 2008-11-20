@@ -38,6 +38,7 @@
 #include "progress_bar.h"
 #include "error.h"
 
+#define CHUNK_BYTES 1048576
 
 /**
  * will invoke the path specified to sendmail with any 
@@ -46,7 +47,7 @@
 int
 processInternal(const char *sm_bin, dstrbuf *msgcon)
 {
-	int bytes = 0;
+	int written_bytes=0, bytes = 0;
 	struct prbar *bar;
 	FILE *open_sendmail;
 	char *ptr = msgcon->str;
@@ -65,14 +66,14 @@ processInternal(const char *sm_bin, dstrbuf *msgcon)
 	/* Loop through getting what's out of message and sending it to sendmail */
 	while (*ptr != '\0') {
 		bytes = strlen(ptr);
-		if (bytes > 100) {
-			bytes = 100;
+		if (bytes > CHUNK_BYTES) {
+			bytes = CHUNK_BYTES;
 		}
-		fwrite(ptr, sizeof(char), bytes, open_sendmail);
+		written_bytes = fwrite(ptr, sizeof(char), bytes, open_sendmail);
 		if (Mopts.verbose && bar != NULL) {
-			prbarPrint(bytes, bar);
+			prbarPrint(written_bytes, bar);
 		}
-		ptr += bytes;
+		ptr += written_bytes;
 	}
 
 	fflush(open_sendmail);
@@ -227,8 +228,8 @@ processRemote(const char *smtp_serv, int smtp_port, dstrbuf *msg)
 	}
 	while (*ptr != '\0') {
 		bytes = strlen(ptr);
-		if (bytes > 100) {
-			bytes = 100;
+		if (bytes > CHUNK_BYTES) {
+			bytes = CHUNK_BYTES;
 		}
 		retval = smtpSendData(sd, ptr, bytes);
 		if (retval == ERROR) {
