@@ -38,7 +38,7 @@
 #include "progress_bar.h"
 #include "error.h"
 
-#define CHUNK_BYTES 1048576
+#define CHUNK_BYTES 1500
 
 /**
  * will invoke the path specified to sendmail with any 
