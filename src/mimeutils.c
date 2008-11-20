@@ -138,7 +138,7 @@ exit:
 	if (file) {
 		fclose(file);
 	}
-	if (!type) {
+	if (!type || type->len == 0) {
 		type = DSB_NEW;
 		dsbCopy(type, "application/unknown");
 	}
