@@ -28,6 +28,6 @@ dstrbuf *mimeFiletype(const char *filename);
 dstrbuf *mimeFilename(const char *in_name);
 void mimeQpEncodeStr(dstrbuf *in, dstrbuf *out);
 int mimeB64EncodeFile(FILE *in, dstrbuf *out);
-dstrbuf *mimeB64EncodeString(const u_char *inbuf, size_t len);
+dstrbuf *mimeB64EncodeString(const u_char *inbuf, size_t len, bool maxline);
 
 #endif /* _MIMEUTILS_H */
