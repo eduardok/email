@@ -67,6 +67,8 @@
 static void
 printMimeHeaders(dstrbuf *data, const char *b, dstrbuf *msg)
 {
+	bool needs_qp=false;
+
 	if (Mopts.gpg_opts & GPG_ENC) {
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/encrypted; "
@@ -81,10 +83,14 @@ printMimeHeaders(dstrbuf *data, const char *b, dstrbuf *msg)
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/mixed; boundary=\"%s\"\r\n", b);
 	} else {
-		if (isUtf8((u_char *)data->str)) {
+		if (isUtf8((u_char *)data->str, &needs_qp)) {
 			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 			dsbPrintf(msg, "Content-Type: text/plain; charset=utf-8\r\n");
-			dsbPrintf(msg, "Content-Transfer-Encoding: base64\r\n");
+			if (needs_qp) {
+				dsbPrintf(msg, "Content-Transfer-Encoding: quoted-printable\r\n");
+			} else {
+				dsbPrintf(msg, "Content-Transfer-Encoding: base64\r\n");
+			}
 			dsbPrintf(msg, "Content-Disposition: inline\r\n");
 		} else if (Mopts.html) {
 			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
@@ -213,6 +219,7 @@ printExtraHeaders(dlist headers, dstrbuf *msg)
 static void
 printHeaders(dstrbuf *data, const char *border, dstrbuf *msg)
 {
+	bool needs_qp=false;
 	char *user_name = getConfValue("MY_NAME");
 	char *email_addr = getConfValue("MY_EMAIL");
 	char *sm_bin = getConfValue("SENDMAIL_BIN");
@@ -220,8 +227,8 @@ printHeaders(dstrbuf *data, const char *border, dstrbuf *msg)
 	char *reply_to = getConfValue("REPLY_TO");
 
 	if (Mopts.subject) {
-		if (isUtf8((u_char *)Mopts.subject)) {
-			dstrbuf *dsb = encodeUtf8String((u_char *)Mopts.subject);
+		if (isUtf8((u_char *)Mopts.subject, &needs_qp)) {
+			dstrbuf *dsb = encodeUtf8String((u_char *)Mopts.subject, needs_qp);
 			dsbPrintf(msg, "Subject: %s\r\n", dsb->str);
 			dsbDestroy(dsb);
 		} else {
@@ -310,14 +317,20 @@ attachFiles(const char *boundary, dstrbuf *out)
 static int
 makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 {
+	bool needs_qp=false;
 	dstrbuf *enc=NULL;
 	if (Mopts.attach) {
 		dsbPrintf(out, "--%s\r\n", border);
-		if (isUtf8((u_char *)in->str)) {
+		if (isUtf8((u_char *)in->str, &needs_qp)) {
 			dsbPrintf(out, "Content-Type: text/plain; charset=utf-8\r\n");
-			dsbPrintf(out, "Content-Transfer-Encoding: base64\r\n");
+			if (needs_qp) {
+				dsbPrintf(out, "Content-Transfer-Encoding: quoted-printable\r\n");
+				enc = mimeQpEncodeString((u_char *)in->str, true);
+			} else {
+				dsbPrintf(out, "Content-Transfer-Encoding: base64\r\n");
+				enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+			}
 			dsbPrintf(out, "Content-Disposition: inline\r\n\r\n");
-			enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
 		} else if (Mopts.html) {
 			dsbPrintf(out, "Content-Type: text/html\r\n\r\n");
 			enc = DSB_NEW;
@@ -328,8 +341,12 @@ makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 			dsbCat(enc, in->str);
 		}
 	} else {
-		if (isUtf8((u_char *)in->str)) {
-			enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+		if (isUtf8((u_char *)in->str, &needs_qp)) {
+			if (needs_qp) {
+				enc = mimeQpEncodeString((u_char *)in->str, true);
+			} else {
+				enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+			}
 		} else {
 			enc = DSB_NEW;
 			dsbCat(enc, in->str);
@@ -355,6 +372,8 @@ makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 static int
 makeGpgMessage(dstrbuf *in, dstrbuf *out, const char *border)
 {
+	dstrbuf *qp=NULL;
+
 	assert(in != NULL);
 	assert(out != NULL);
 	assert(border != NULL);
@@ -372,7 +391,9 @@ makeGpgMessage(dstrbuf *in, dstrbuf *out, const char *border)
 	}
 
 	dsbPrintf(out, "Content-Transfer-Encoding: quoted-printable\r\n\r\n");
-	mimeQpEncodeStr(in, out);
+	qp = mimeQpEncodeString((u_char *)in->str, true);
+	dsbnCat(out, qp->str, qp->len);
+	dsbDestroy(qp);
 	if (Mopts.attach) {
 		attachFiles(border, out);
 		dsbPrintf(out, "\r\n--%s--\r\n", border);

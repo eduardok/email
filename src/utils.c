@@ -54,36 +54,69 @@
 #include "mimeutils.h"
 
 bool
-isUtf8(const u_char *str)
+isUtf8(const u_char *str, bool *partial)
 {
 	bool is_utf8 = false;
+	u_int utf8=0, ascii=0;
+	u_int percent_ascii=0;
 
-	/* If greater than 0x7F (127) then it's not normal ASCII */
-	if (*str > 0x7F) {
+	while (*str != '\0') {
 		u_char fbyte = str[0];
-		u_char sbyte = str[1];
-		/* If the first char is between 0xC0 (192) and 0xFD (253) 
-		   and the second byte is between 0x80 (128) and 0xBF (191)
-		   it's utf8 encoding. */
-		if ((fbyte >= 0xC0 && fbyte <= 0xFD) && 
-			(sbyte >= 0x80 && sbyte <= 0xBF)) {
+		/* If greater than 0x7F (127) then it's not normal ASCII */
+		if (fbyte > 0x7F) {
 			is_utf8 = true;
+			/* It's a 2-byte sequence if it's between 0xC0(192) 
+			   and 0xDF(223),
+			   It's a 3-byte sequence if it's between 0xE0(224)
+			   and 0xEF(239) 
+			   It's a 4-byte sequence if it's between 0xF0(240)
+			   and 0xF4(244) */
+			if (fbyte >= 0xC0 && fbyte <= 0xDF) {
+				str += 2;
+			} else if (fbyte >= 0xE0 && fbyte <= 0xEF) {
+				str += 3;
+			} else if (fbyte >= 0xF0 && fbyte <= 0xF4) {
+				str += 4;
+			} else {
+				str += 1;
+			}
+			utf8++;
+		} else {
+			ascii++;
+			str += 1;
 		}
 	}
+
+	/* If the string is 75% or more of ascii characters, 
+	   we'll call it partial utf-8 */
+	if (ascii > 0) {
+		percent_ascii = ((float)ascii / (float)(ascii + utf8)) * 100;
+	}
+	if (percent_ascii >= 75) {
+		*partial = true;
+	} else {
+		*partial = false;
+	}
+
 	return is_utf8;
 }
 
 dstrbuf *
-encodeUtf8String(const u_char *str)
+encodeUtf8String(const u_char *str, bool use_qp)
 {
 	const u_int max_blk_len = 45;
 	u_int i=max_blk_len;
-	dstrbuf *dsb = DSB_NEW;
+	dstrbuf *enc, *dsb = DSB_NEW;
 	size_t len = strlen((char *)str);
 
-	dstrbuf *enc = mimeB64EncodeString(str, 
-		(len > max_blk_len ? max_blk_len : len), false);
-	dsbPrintf(dsb, "=?utf-8?b?%s?=", enc->str);
+	if (use_qp) {
+		enc = mimeQpEncodeString(str, false);
+		dsbPrintf(dsb, "=?utf-8?q?%s?=", enc->str);
+	} else {
+		enc = mimeB64EncodeString(str, 
+			(len > max_blk_len ? max_blk_len : len), false);
+		dsbPrintf(dsb, "=?utf-8?b?%s?=", enc->str);
+	}
 	dsbDestroy(enc);
 
 	/* If we have anymore data to encode, we have to do it by adding a newline

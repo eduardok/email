@@ -130,6 +130,7 @@ end:
 dstrbuf *
 formatEmailAddr(char *name, char *address)
 {
+	bool needs_qp=false;
 	char *proper_name, *proper_addr;
 	dstrbuf *ret = DSB_NEW;
 
@@ -138,8 +139,8 @@ formatEmailAddr(char *name, char *address)
 	proper_addr = stripEmailAddr(address);
 	if (name) {
 		proper_name = stripEmailName(name);
-		if (isUtf8((u_char *)proper_name)) {
-			dstrbuf *dsb = encodeUtf8String((u_char *)proper_name);
+		if (isUtf8((u_char *)proper_name, &needs_qp)) {
+			dstrbuf *dsb = encodeUtf8String((u_char *)proper_name, needs_qp);
 			dsbPrintf(ret, "\"%s\" <%s>", dsb->str, proper_addr);
 			dsbDestroy(dsb);
 		} else {

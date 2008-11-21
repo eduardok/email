@@ -283,9 +283,9 @@ qpIsEncodable(int c)
 }
 
 static void
-qpStdout(int ch, int *curr_len, dstrbuf *out)
+qpStdout(int ch, int *curr_len, dstrbuf *out, bool wrap)
 {
-	if (*curr_len == (QP_MAX_LINE_LEN - 1)) {
+	if ((*curr_len == (QP_MAX_LINE_LEN - 1)) && wrap) {
 		dsbPrintf(out, "=\r\n");
 		*curr_len = 0;
 	}
@@ -295,9 +295,9 @@ qpStdout(int ch, int *curr_len, dstrbuf *out)
 }
 
 static void
-qpEncout(int ch, int *curr_len, dstrbuf *out)
+qpEncout(int ch, int *curr_len, dstrbuf *out, bool wrap)
 {
-	if ((*curr_len + 3) >= QP_MAX_LINE_LEN) {
+	if (((*curr_len + 3) >= QP_MAX_LINE_LEN) && wrap) {
 		dsbPrintf(out, "=\r\n");
 		*curr_len = 0;
 	}
@@ -309,14 +309,14 @@ qpEncout(int ch, int *curr_len, dstrbuf *out)
 /**
  * Encode a quoted printable string.
 **/
-void
-mimeQpEncodeStr(dstrbuf *in, dstrbuf *out)
+dstrbuf *
+mimeQpEncodeString(const u_char *str, bool wrap)
 {
-	int line_len = in->len;
-	char *str = in->str;
+	int line_len=0;
+	dstrbuf *out = DSB_NEW;
 
 	for (; *str != '\0'; str++) {
-		if (line_len == (QP_MAX_LINE_LEN - 1)) {
+		if (line_len == (QP_MAX_LINE_LEN - 1) && wrap) {
 			dsbPrintf(out, "=\r\n");
 			line_len = 0;
 		}
@@ -325,9 +325,9 @@ mimeQpEncodeStr(dstrbuf *in, dstrbuf *out)
 		case ' ':
 		case '\t':
 			if ((str[1] == '\r') || (str[1] == '\n')) {
-				qpEncout(*str, &line_len, out);
+				qpEncout(*str, &line_len, out, wrap);
 			} else {
-				qpStdout(*str, &line_len, out);
+				qpStdout(*str, &line_len, out, wrap);
 			}
 			break;
 		case '\r':
@@ -338,12 +338,13 @@ mimeQpEncodeStr(dstrbuf *in, dstrbuf *out)
 			break;
 		default:
 			if (qpIsEncodable(*str)) {
-				qpEncout(*str, &line_len, out);
+				qpEncout(*str, &line_len, out, wrap);
 			} else {
-				qpStdout(*str, &line_len, out);
+				qpStdout(*str, &line_len, out, wrap);
 			}
 			break;
 		}
 	}
+	return out;
 }
 
