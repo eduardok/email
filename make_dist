@@ -74,4 +74,4 @@ mv $HOME/temp/email-"$VERSION".tar.gz $HOME
 rm -rf $HOME/temp
 rm -f "$make_dist_file"
 
-printf "\rDistrobution file is at $HOME/email-$VERSION.tar.gz\n"
+printf "\rDistribution file is at $HOME/email-$VERSION.tar.gz\n"
