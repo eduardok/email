@@ -47,7 +47,7 @@ used at the command line.
 There are a few possible options to email.  I have listed
 them in order of relevance of usage:
 .TP
-.B \-\-help , \-help , \-h "Module of Help"
+.B \-\-help module | \-h "Module of Help"
 This option can be specified with a module of help
 topic, or without one.  Without a module of help topic,
 it will just print a standard help screen with all
@@ -67,20 +67,20 @@ Instead it is a file in email's home directory called
 be rewritten with every release of email.
 
 .TP
-.B \-\-verbose, \-V
+.B \-\-verbose | \-V
 This option will display the progress of communicating
 with the SMTP server. A pretty progress bar will be 
 displayed when data is sent. This option is replacing
 the old \-quiet option that would do the exact opposite.
 
 .TP
-.B \-\-blank-mail, \-blank-mail, \-b
+.B \-\-blank-mail | \-blank-mail | \-b
 Use this option if you would like to send a blank email
 from the command line.  This is good if you just want to 
 send a message with only the headers and no content.
 
 .TP
-.B \-\-subject , \-subject , \-sub , \-s "Subject of Email"
+.B \-\-subject subject | \-subject subject | \-s "Subject of Email"
 This option should be rather obvious.  You specify the
 subject of the email with this option.  If you are not
 redirecting to standard input and you do not specify a
@@ -88,7 +88,7 @@ subject, email will ask you for the subject.  Null
 subjects are allowed.
 
 .TP
-.B \-\-encrypt , \-encrypt , \-e  
+.B \-\-encrypt | \-encrypt | \-e  
 This options allows you to encrypt your email message
 using 'gpg'. GPG can be obtained by going to:
 .URL http://www.gnupg.org.
@@ -98,13 +98,13 @@ the message using their key.  This key MUST be present
 in order for the encryption to work properly.
 
 .TP
-.B \-\-sign , \-sign
+.B \-\-sign | \-sign
 This options will let you sign your emails
 on the fly... It uses the 'gpg --detach-sign' option.
 It will 'sign' the email with your public key.
 
 .TP
-.B \-\-cc , \-cc recipient1,recipient2,recipient3,...
+.B \-\-cc recipient | \-cc recipient1,recipient2,recipient3,...
 This option allows you to "curtosy copy" a list of
 recipients. Recipients can be from the address book
 or just plain email addresses.  They should be comma
@@ -113,7 +113,7 @@ recipients *will* be posted in the headers and read
 by email clients.
 
 .TP
-.B \-\-bcc , \-bcc recipient1,recipient2,recipient3,...
+.B \-\-bcc receipient | \-bcc recipient1,recipient2,recipient3,...
 Same as the --cc option, but these recipients will
 .B *not* 
 be posted in the headers of the email.  This
@@ -126,7 +126,7 @@ you'll never know it
 )
 
 .TP
-.B \-\-attach , \-a file
+.B \-\-attach file | \-a file
 Attach a binary file.  This option will allow you 
 to attach N files to your email and will be base64
 encoded upon delivery.  This option is helpful if
@@ -135,7 +135,7 @@ ascii text. This option can be used multiple times
 to add multiple files to attach.
 
 .TP
-.B \-\-smtp-server , \-r server
+.B \-\-smtp-server server | \-r server
 This option will let you override the smtp server
 that is specified in the email.conf file... You can
 use this option if you do not have an email.conf
@@ -145,7 +145,7 @@ this option would be the \-\-smtp-port option,
 however, it is not needed.
 
 .TP
-.B \-\-smtp-port , \-p port
+.B \-\-smtp-port port | \-p port
 This option works well with the above option as it
 will allow you to bypass the configuration file and 
 specify a port on the command line.  This is helpful
@@ -156,32 +156,32 @@ option, and you don't have an email.conf file, it will
 default to port 25 for you.
 
 .TP
-.B \-\-smtp-auth , -m type
+.B \-\-smtp-auth type | -m type
 You must specify this option to use SMTP AUTH if you
 aren't using a configuration file.  'type' is the type
 of AUTH your server lets you use.  There are two supported
 AUTH types with email: PLAIN and LOGIN.  
 
 .TP
-.B \-\-smtp-user , -u user
+.B \-\-smtp-user user | -u user
 If you don't want to keep your SMTP username in your
 email.conf file (SMTP_AUTH_USER), then you can use this
 command line option to specify it.
 
 .TP
-.B \-\-smtp-pass , -i pass
+.B \-\-smtp-pass pass | -i pass
 If you don't want to keep your SMTP password in your
 email.conf file (SMTP_AUTH_PASS), then you can use this
 command line option to specify it.
 
 .TP
-.B \-\-from-name , -n name
+.B \-\-from-name name | -n name
 This option will override MY_NAME in email.conf.
 This is what the recipient will see in the from
 field of their email client.
 
 .TP
-.B \-\-from-addr , -f addr
+.B \-\-from-addr addr | -f addr
 This option will override MY_EMAIL in email.conf.
 This is what the recipient will see in the from
 field of their email client as your email address.
@@ -192,7 +192,7 @@ Use this option to specify a configuration file other
 than ~/.email.conf or @sysconfdir@/email/email.conf.  
 
 .TP
-.B \-\-header , \-H string,string,string,...
+.B \-\-header string | \-H string,string,string,...
 If you would like to append headers to the message 
 that you are sending, you can use this option multiple
 times and specify the header you would like to append
@@ -203,14 +203,14 @@ An example of a header string would look like:
 --header "X-My-Header: Stuff goes here"
 
 .TP
-.B \-\-timeout secs, \-x secs
+.B \-\-timeout secs | \-x secs
 Set a timeout (in seconds) on the socket. This is
 helpful if you would like to have the client stop
 trying to send/recv data from the SMTP server if
 it hangs after a period of time.
 
 .TP
-.B \-\-high-priority , \-o
+.B \-\-high-priority | \-o
 This options allows you to take advantage of using
 the priority option used by some email clients.
 If the option is specified when sent to a user

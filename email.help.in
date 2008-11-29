@@ -5,7 +5,7 @@
 
 help|h|--help|-help|help|-h
     
---help , -help , -h "Module of Help"
+--help | -help | -h "Module of Help"
 
   This option can be specified with a module of help
   topic, or without one.  Without a module of help topic,
@@ -33,7 +33,7 @@ EOH
 
 verbose|V|--verbose|-verbose|-V
 
---verbose, -verbose, -V
+--verbose | -verbose | -V
 
   Displays the progress of communicating with the SMTP
   server. Tells what's going on and prints a pretty
@@ -50,7 +50,7 @@ EOH
 
 subject|sub|s|--subject|-subject|--sub|-sub|-s
 
---subject , -subject , -sub , -s "Subject of Email"
+--subject | -subject | -sub | -s "Subject of Email"
 
   This option should be rather obvious.  You specify the
   subject of the email with this option.  If you are not
@@ -66,7 +66,7 @@ EOH
 
 encrypt|e|--encrypt|-encrypt|-e
 
---encrypt , -encrypt , -e 
+--encrypt | -encrypt | -e 
         
   This options allows you to encrypt your email message
   using 'gpg'. GPG can be obtained by going to:
@@ -85,7 +85,7 @@ EOH
 
 sign|--sign|-sign
 
---sign , -sign
+--sign | -sign
           
   This options will let you "clear sign" your emails
   on the fly... It uses the 'gpg --detach-sign' option.
@@ -99,7 +99,7 @@ EOH
 
 cc|--cc|-cc
 
---cc , -cc recipient,recipient,recipient,...
+--cc | -cc recipient,recipient,recipient,...
 
   "Carbon Copy"
   This option allows you to "carbon copy" a list of
@@ -118,7 +118,7 @@ EOH
 
 bcc|--bcc|-bcc
 
---bcc , -bcc recipient,recipient,recipient,...
+--bcc | -bcc recipient,recipient,recipient,...
 
   "Blind Carbon Copy"
   Same as the --cc option, but these recipients will
@@ -137,7 +137,7 @@ EOH
 
 smtp-server|r|--smtp-server|-smtp-server|-r
 
---smtp-server , -r server
+--smtp-server | -r server
 
   This option will let you override the smtp server
   that is specified in the email.conf file...
@@ -151,7 +151,7 @@ EOH
 
 smtp-port|p|--smtp-port|-smtp-port|-p
 
---smtp-port, -p port
+--smtp-port | -p port
 
   This option will let you specify a temporary port for 
   email to connect to.  This is helpful when you use the
@@ -167,7 +167,7 @@ EOH
 
 high-priority|o|--high-priority|-high-priority|-o
 
---high-priority , -o
+--high-priority | -o
           
   This options allows you to take advantage of using
   the priority option used by some email clients.
@@ -202,7 +202,7 @@ EOH
 
 attach|a|--attach|-attach|-a
 
---attach , -a file
+--attach file | -a file
 
   This option allows you to attach files to your email.
   It will encode your file with base64 and attach it with
@@ -218,7 +218,7 @@ EOH
 
 conf-file|c|--conf-file|-conf-file|-c
 
---conf-file, -c /path/to/file
+--conf-file | -c /path/to/file
 
   Specify this option if you would like to use a configuration
   file other than the default configuration.  Email looks for 
@@ -233,7 +233,7 @@ EOH
 
 check-config|t|--check-config|-check-config|-t
 
---check-config, -t
+--check-config | -t
 
   You use this option if you want to check to make sure that the
   email.conf file is properly written.  What this means is that
@@ -252,7 +252,7 @@ EOH
 
 blank-mail|b|--blank-mail|-blank-mail|-b
 
---blank-mail, -b
+--blank-mail | -b
 
   Use this option if you want to send a message with no content.  
   This is good if you want to send emails from the command line 
@@ -276,7 +276,7 @@ EOH
 
 gpg-pass|gpg-password|g|--gpg-password|--gpg-pass|-gpg-password|-gpg-pass|-g
 
---gpg-pass pass, -g pass
+--gpg-pass pass | -g pass
 
   If you don't want to keep your gpg password (to use for signing and encryption)
   in your email.conf file (GPG_PASS), then you can always use this command line 
@@ -293,7 +293,7 @@ EOH
 
 smtp-user|smtp-username|u|--smtp-username|--smtp-user|-smtp-user|-smtp-username|-u
 
---smtp-user name, -u name
+--smtp-user name | -u name
 
   If you don't want to keep your SMTP username (for SMTP Authentication)
   in your email.conf file (SMTP_AUTH_USER), then you can use this command line
@@ -310,7 +310,7 @@ EOH
 
 smtp-pass|smtp-password|i|--smtp-password|--smtp-pass|-smtp-pass|-smtp-password|-i
 
---smtp-pass pass, -i pass
+--smtp-pass pass | -i pass
 
   If you don't want to keep your SMTP password (for SMTP Authentication)
   in your email.conf file (SMTP_AUTH_PASS), then you can use this command line
@@ -327,7 +327,7 @@ EOH
 
 --from-name|-from-name|from-name|-n|n
 
---from-name name, -n name
+--from-name name | -n name
 
   You can specify your name with this option.  Typically, you would put this
   in email.conf under MY_NAME, but, if you are not using a configuration file
@@ -342,7 +342,7 @@ EOH
 
 --from-addr|-from-addr|from-addr|-f|f
 
---from-addr addr, -f addr
+--from-addr addr | -f addr
   
   You can specify your email address with this option.  Typicall, you would 
   put this in email.conf under MY_EMAIL, but, if you are not using a
@@ -371,7 +371,7 @@ EOH
 
 --header|-header|header|-H|H
 
---header string, -H string
+--header string | -H string
   
   You can specify headers to include in the message. To do this, simply 
   specify the entire header to this option. To specify multiple headers
@@ -404,7 +404,7 @@ EOH
 
 --timeout|-timeout|-x
 
---timeout secs, -x secs
+--timeout secs | -x secs
 
   Specify a timeout period for sending/receiving on a socket. This is
   helpful if you'd like the client to stop trying to send and receive
