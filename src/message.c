@@ -65,10 +65,8 @@
  * damn functions and get a great idea
 **/
 static void
-printMimeHeaders(dstrbuf *data, const char *b, dstrbuf *msg)
+printMimeHeaders(const char *b, dstrbuf *msg, CharSetType charset)
 {
-	bool needs_qp=false;
-
 	if (Mopts.gpg_opts & GPG_ENC) {
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/encrypted; "
@@ -83,10 +81,10 @@ printMimeHeaders(dstrbuf *data, const char *b, dstrbuf *msg)
 		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/mixed; boundary=\"%s\"\r\n", b);
 	} else {
-		if (isUtf8((u_char *)data->str, &needs_qp)) {
+		if (charset == IS_UTF8 || charset == IS_PARTIAL_UTF8) {
 			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 			dsbPrintf(msg, "Content-Type: text/plain; charset=utf-8\r\n");
-			if (needs_qp) {
+			if (charset == IS_PARTIAL_UTF8) {
 				dsbPrintf(msg, "Content-Transfer-Encoding: quoted-printable\r\n");
 			} else {
 				dsbPrintf(msg, "Content-Transfer-Encoding: base64\r\n");
@@ -217,22 +215,28 @@ printExtraHeaders(dlist headers, dstrbuf *msg)
  * that were specified at the command line.
 **/
 static void
-printHeaders(dstrbuf *data, const char *border, dstrbuf *msg)
+printHeaders(const char *border, dstrbuf *msg, CharSetType msg_cs)
 {
-	bool needs_qp=false;
+	char *subject=Mopts.subject;
 	char *user_name = getConfValue("MY_NAME");
 	char *email_addr = getConfValue("MY_EMAIL");
 	char *sm_bin = getConfValue("SENDMAIL_BIN");
 	char *smtp_serv = getConfValue("SMTP_SERVER");
 	char *reply_to = getConfValue("REPLY_TO");
+	dstrbuf *dsb=NULL;
 
-	if (Mopts.subject) {
-		if (isUtf8((u_char *)Mopts.subject, &needs_qp)) {
-			dstrbuf *dsb = encodeUtf8String((u_char *)Mopts.subject, needs_qp);
-			dsbPrintf(msg, "Subject: %s\r\n", dsb->str);
+	if (subject) {
+		CharSetType cs = getCharSet((u_char *)subject);
+		if (cs == IS_UTF8) {
+			dsb = encodeUtf8String((u_char *)subject, false);
+			subject = dsb->str;
+		} else if (cs == IS_PARTIAL_UTF8) {
+			dsb = encodeUtf8String((u_char *)subject, true);
+			subject = dsb->str;
+		}
+		dsbPrintf(msg, "Subject: %s\r\n", subject);
+		if (dsb) {
 			dsbDestroy(dsb);
-		} else {
-			dsbPrintf(msg, "Subject: %s\r\n", Mopts.subject);
 		}
 	}
 	printFromHeaders(user_name, email_addr, msg);
@@ -254,7 +258,7 @@ printHeaders(dstrbuf *data, const char *border, dstrbuf *msg)
 	if (reply_to) {
 		dsbPrintf(msg, "Reply-To: <%s>\r\n", reply_to);
 	}
-	printMimeHeaders(data, border, msg);
+	printMimeHeaders(border, msg, msg_cs);
 	dsbPrintf(msg, "X-Mailer: Cleancode.email v%s \r\n", EMAIL_VERSION);
 	if (Mopts.priority) {
 		dsbPrintf(msg, "X-Priority: 1\r\n");
@@ -315,15 +319,14 @@ attachFiles(const char *boundary, dstrbuf *out)
  * if and when a file is attached.
 **/
 static int
-makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
+makeMessage(dstrbuf *in, dstrbuf *out, const char *border, CharSetType charset)
 {
-	bool needs_qp=false;
 	dstrbuf *enc=NULL;
 	if (Mopts.attach) {
 		dsbPrintf(out, "--%s\r\n", border);
-		if (isUtf8((u_char *)in->str, &needs_qp)) {
+		if (charset == IS_UTF8 || charset == IS_PARTIAL_UTF8) {
 			dsbPrintf(out, "Content-Type: text/plain; charset=utf-8\r\n");
-			if (needs_qp) {
+			if (IS_PARTIAL_UTF8) {
 				dsbPrintf(out, "Content-Transfer-Encoding: quoted-printable\r\n");
 				enc = mimeQpEncodeString((u_char *)in->str, true);
 			} else {
@@ -341,12 +344,10 @@ makeMessage(dstrbuf *in, dstrbuf *out, const char *border)
 			dsbCat(enc, in->str);
 		}
 	} else {
-		if (isUtf8((u_char *)in->str, &needs_qp)) {
-			if (needs_qp) {
-				enc = mimeQpEncodeString((u_char *)in->str, true);
-			} else {
-				enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
-			}
+		if (charset == IS_UTF8) {
+			enc = mimeB64EncodeString((u_char *)in->str, in->len, true);
+		} else if (charset == IS_PARTIAL_UTF8) {
+			enc = mimeQpEncodeString((u_char *)in->str, true);
 		} else {
 			enc = DSB_NEW;
 			dsbCat(enc, in->str);
@@ -435,7 +436,7 @@ createGpgEmail(dstrbuf *msg, GpgCallType gpg_type)
 		buf=NULL;
 		goto end;
 	}
-	printHeaders(msg, border1->str, buf);
+	printHeaders(border1->str, buf, IS_ASCII);
 
 	dsbPrintf(buf, "\r\n--%s\r\n", border1->str);
 	if (gpg_type & GPG_ENC) {
@@ -473,6 +474,7 @@ createPlainEmail(dstrbuf *msg)
 {
 	dstrbuf *border=NULL;
 	dstrbuf *buf=DSB_NEW;
+	CharSetType cs;
 
 	if (Mopts.attach) {
 		border = mimeMakeBoundary();
@@ -480,8 +482,9 @@ createPlainEmail(dstrbuf *msg)
 		border = DSB_NEW;
 	}
 
-	printHeaders(msg, border->str, buf);
-	if (makeMessage(msg, buf, border->str) < 0) {
+	cs = getCharSet((u_char *)msg->str);
+	printHeaders(border->str, buf, cs);
+	if (makeMessage(msg, buf, border->str, cs) < 0) {
 		dsbDestroy(buf);
 		buf=NULL;
 	}

@@ -53,10 +53,50 @@
 #include "error.h"
 #include "mimeutils.h"
 
-bool
-isUtf8(const u_char *str, bool *partial)
+/**
+ * Return number of printable chars in a utf8 string
+ */
+size_t
+utf8Strlen(const u_char *str)
 {
-	bool is_utf8 = false;
+	size_t len=0;
+
+	while (*str != '\0') {
+		u_char fbyte = str[0];
+		/* If greater than 0x7F (127) then it's not normal ASCII */
+		if (fbyte > 0x7F) {
+			/* It's a 2-byte sequence if it's between 0xC0(192) 
+			   and 0xDF(223),
+			   It's a 3-byte sequence if it's between 0xE0(224)
+			   and 0xEF(239) 
+			   It's a 4-byte sequence if it's between 0xF0(240)
+			   and 0xF4(244) */
+			if (fbyte >= 0xC0 && fbyte <= 0xDF) {
+				str += 2;
+			} else if (fbyte >= 0xE0 && fbyte <= 0xEF) {
+				str += 3;
+			} else if (fbyte >= 0xF0 && fbyte <= 0xF4) {
+				str += 4;
+			} else {
+				str += 1;
+			}
+			len++;
+		} else {
+			len++;
+		}
+	}
+	return len;
+}
+
+/**
+ * We're going to try and get the type of character set this
+ * string is.  We primarily just support UTF-8 and ASCII right
+ * now.  May support other charsets later.
+ */
+CharSetType
+getCharSet(const u_char *str)
+{
+	CharSetType type=IS_ASCII;
 	u_int utf8=0, ascii=0;
 	u_int percent_ascii=0;
 
@@ -64,7 +104,6 @@ isUtf8(const u_char *str, bool *partial)
 		u_char fbyte = str[0];
 		/* If greater than 0x7F (127) then it's not normal ASCII */
 		if (fbyte > 0x7F) {
-			is_utf8 = true;
 			/* It's a 2-byte sequence if it's between 0xC0(192) 
 			   and 0xDF(223),
 			   It's a 3-byte sequence if it's between 0xE0(224)
@@ -87,18 +126,22 @@ isUtf8(const u_char *str, bool *partial)
 		}
 	}
 
-	/* If the string is 75% or more of ascii characters, 
-	   we'll call it partial utf-8 */
-	if (ascii > 0) {
-		percent_ascii = ((float)ascii / (float)(ascii + utf8)) * 100;
-	}
-	if (percent_ascii >= 75) {
-		*partial = true;
-	} else {
-		*partial = false;
+	if (utf8) {
+		/* If the string is 75% or more of ascii characters, 
+		   we'll call it partial utf-8 */
+		if (ascii > 0) {
+			percent_ascii = ((float)ascii / (float)(ascii + utf8)) * 100;
+		}
+		if (percent_ascii >= 75) {
+			type = IS_PARTIAL_UTF8;
+		} else {
+			type = IS_UTF8;
+		}
+	} else if (!utf8 && !ascii) {
+		type = IS_OTHER;
 	}
 
-	return is_utf8;
+	return type;
 }
 
 dstrbuf *
@@ -110,8 +153,11 @@ encodeUtf8String(const u_char *str, bool use_qp)
 	size_t len = strlen((char *)str);
 
 	if (use_qp) {
+		// TODO: We need to break this up so that we're not 
+		// creating extra long strings.
 		enc = mimeQpEncodeString(str, false);
 		dsbPrintf(dsb, "=?utf-8?q?%s?=", enc->str);
+		i = len; // Just reset for now.
 	} else {
 		enc = mimeB64EncodeString(str, 
 			(len > max_blk_len ? max_blk_len : len), false);

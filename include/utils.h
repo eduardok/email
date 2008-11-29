@@ -27,6 +27,13 @@
 #include <sys/types.h>
 #include "dstrbuf.h"
 
+typedef enum {
+	IS_ASCII,
+	IS_UTF8,
+	IS_PARTIAL_UTF8,
+	IS_OTHER
+} CharSetType;
+
 dstrbuf *expandPath(const char *path);
 int copyfile(const char *from, const char *to);
 dstrbuf *randomString(size_t size);
@@ -34,7 +41,7 @@ dstrbuf *getFirstEmail(void);
 void properExit(int sig);
 void chomp(char *str);
 int copyUpTo(dstrbuf *buf, int stop, FILE *in);
-bool isUtf8(const u_char *str, bool *partial);
+CharSetType getCharSet(const u_char *str);
 dstrbuf *encodeUtf8String(const u_char *str, bool use_qp);
 
 #endif /* __UTILS_H */

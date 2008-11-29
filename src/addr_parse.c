@@ -130,21 +130,26 @@ end:
 dstrbuf *
 formatEmailAddr(char *name, char *address)
 {
-	bool needs_qp=false;
 	char *proper_name, *proper_addr;
-	dstrbuf *ret = DSB_NEW;
+	dstrbuf *ret = DSB_NEW, *dsb=NULL;
+	CharSetType charset;
 
 	assert(address != NULL);
 
 	proper_addr = stripEmailAddr(address);
 	if (name) {
 		proper_name = stripEmailName(name);
-		if (isUtf8((u_char *)proper_name, &needs_qp)) {
-			dstrbuf *dsb = encodeUtf8String((u_char *)proper_name, needs_qp);
-			dsbPrintf(ret, "\"%s\" <%s>", dsb->str, proper_addr);
+		charset = getCharSet((u_char *)proper_name);
+		if (charset == IS_UTF8) {
+			dsb = encodeUtf8String((u_char *)proper_name, false);
+			proper_name = dsb->str;
+		} else if (charset == IS_PARTIAL_UTF8) {
+			dsb = encodeUtf8String((u_char *)proper_name, true);
+			proper_name = dsb->str;
+		}
+		dsbPrintf(ret, "\"%s\" <%s>", proper_name, proper_addr);
+		if (dsb) {
 			dsbDestroy(dsb);
-		} else {
-			dsbPrintf(ret, "\"%s\" <%s>", proper_name, proper_addr);
 		}
 	} else {
 		dsbPrintf(ret, "<%s>", proper_addr);
