@@ -65,7 +65,6 @@ else
     CFLAGS="$CFLAGS -DUSE_GNU_STRFTIME"
 fi
 
-AC_SUBST(docdir, ["\${prefix}/doc/email-${version}"])
 AC_SUBST(ver, ["$version"])
 
 CFLAGS="$CFLAGS -I$cwd -I$cwd/src -I$cwd/include -I../include -I$cwd/dlib/include"
