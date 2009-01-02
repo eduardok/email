@@ -18,7 +18,7 @@ FILES = email.o addr_parse.o addy_book.o conf.o error.o execgpg.o file_io.o \
 	remotesmtp.o sig_file.o smtpcommands.o utils.o
 
 all: $(FILES)
-	$(CC) $(CFLAGS) -o email $(FILES) $(OTHER_FILES) $(LDFLAGS) $(LIBS) $(DLIB)
+	$(CC) $(CFLAGS) -o email $(FILES) $(OTHER_FILES) $(DLIB) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o *.d email
