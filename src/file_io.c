@@ -131,10 +131,10 @@ openEditor(const char *editor, const char *filename)
 }
 
 static dstrbuf *
-getFileContents(int fd)
+getFileContents(const char *filename)
 {
 	dstrbuf *tmp=NULL, *buf=NULL;
-	FILE *in = fdopen(fd, "r");
+	FILE *in = fopen(filename, "r");
 
 	if (!in) {
 		return NULL;
@@ -164,20 +164,25 @@ editEmail(void)
 	dstrbuf *fpath=NULL;
 	dstrbuf *buf=NULL;
 	size_t fsize=0;
-	char filename[TMPFILE_TEMPLATE_SIZE]=TMPFILE_TEMPLATE;
-
-	assert(filename != NULL);
+	char filename[TMPFILE_TEMPLATE_SIZE] = TMPFILE_TEMPLATE;
 
 	if (!(editor = getenv("EDITOR"))) {
 		warning("Environment varaible EDITOR not set: Defaulting to \"vi\"\n");
 		editor = "vi";
 	}
 
+	/* Use of mkstemp causes an issue on Cygwin/Windows machines because the 
+	   only way to avoid a race condition there is to hold the file open
+	   while the editor oepns it as well. It seems Cygwin/Windows won't
+	   allow the file to be written to while someone else has it open. 
+	   So, we need to make sure we close it and just reference the file
+	   that was created by it's name. */
 	fd = mkstemp(filename);
 	if (fd < 0) {
-		fatal("Could not create temp file for editor: %s", filename);
+		fatal("Could not create temp file for editor");
 		properExit(ERROR);
 	}
+	close(fd);
 	if (openEditor(editor, filename) < 0) {
 		warning("Error when trying to open editor '%s'", editor);
 	}
@@ -190,7 +195,7 @@ editEmail(void)
 			properExit(EASY);
 		}
 	}
-	buf = getFileContents(fd); // closes fd
+	buf = getFileContents(filename);
 	unlink(filename);
 
 	/* If they specified a signature file, let's append it */

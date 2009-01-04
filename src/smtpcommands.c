@@ -654,6 +654,7 @@ smtpInit(dsocket *sd, const char *domain)
 
 	printProgress("Greeting the SMTP server...");
 	retval = ehlo(sd, domain);
+	printProgress("EHLO Sent...");
 	if (retval == ERROR) {
 		/*
 		 * Per RFC, if ehlo error's out, you can
