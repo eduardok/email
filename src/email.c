@@ -52,11 +52,6 @@ static struct option Gopts[] = {
 	{"verbose", 0, 0, 'v'},
 	{"high-priority", 0, 0, 'o'},
 	{"encrypt", 0, 0, 'e'},
-	{"html", 0, 0, 1},
-	{"sign", 0, 0, 2},
-	{"clearsign", 0, 0, 2},
-	{"cc", 1, 0, 3},
-	{"bcc", 1, 0, 4},
 	{"subject", 1, 0, 's'},
 	{"sub", 1, 0, 's'},
 	{"smtp-server", 1, 0, 'r'},
@@ -75,9 +70,15 @@ static struct option Gopts[] = {
 	{"from-addr", 1, 0, 'f'},
 	{"from-name", 1, 0, 'n'},
 	{"header", 1, 0, 'H'},
+	{"timeout", 1, 0, 'x'},
+	{"html", 0, 0, 1},
+	{"sign", 0, 0, 2},
+	{"clearsign", 0, 0, 2},
+	{"cc", 1, 0, 3},
+	{"bcc", 1, 0, 4},
 	{"to-name", 1, 0, 5},
 	{"tls", 0, 0, 6},
-	{"timeout", 1, 0, 'x'},
+	{"no-encoding", 0, 0, 7},
 	{NULL, 0, NULL, 0 }
 };
 
@@ -116,7 +117,8 @@ usage(void)
 	    "    -i, -smtp-pass password   Specify your password for SMTP AUTH\n"
 	    "    -g, -gpg-pass             Specify your password for GPG\n"
 	    "    -H, -header string        Add header (can be used multiple times)\n"
-	    "        -high-priority        Send the email with high priority\n");
+	    "        -high-priority        Send the email with high priority\n"
+	    "        -no-encoding          Don't use UTF-8 encoding\n");
 
 	exit(EXIT_SUCCESS);
 }
@@ -212,6 +214,7 @@ main(int argc, char **argv)
 	conf_file = NULL;
 	global_msg = NULL;
 	memset(&Mopts, 0, sizeof(struct mailer_options));
+	Mopts.encoding = true;
 
 	/* Check if they need help */
 	if ((argc > 1) && (!strcmp(argv[1], "-h") ||
@@ -323,6 +326,9 @@ main(int argc, char **argv)
 			break;
 		case 6:
 			setConfValue("USE_TLS", xstrdup("true"));
+			break;
+		case 7:
+			Mopts.encoding = false;
 			break;
 		default:
 			/* Print an error message here  */

@@ -38,8 +38,8 @@
 #define FALSE   0
 #define EASY    100
 
-#define TMPFILE_TEMPLATE ".email.msg.XXXXXX"
-#define TMPFILE_TEMPLATE_SIZE 18
+#define TMPFILE_TEMPLATE "/tmp/.email.msg.XXXXXX"
+#define TMPFILE_TEMPLATE_SIZE 23
 
 /* EMAIL_DIR determined at compile time */
 #define MAIN_CONFIG  EMAIL_DIR"/email.conf"
@@ -67,6 +67,7 @@ dstrbuf *global_msg;
 
 struct mailer_options {
 	bool verbose;
+	bool encoding;
 	short html;
 	short priority;
 	short receipt;

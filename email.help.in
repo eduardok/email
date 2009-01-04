@@ -411,3 +411,18 @@ EOH
   on a server that has stopped responding.
 
 EOH
+
+#####
+# Encoding
+#####
+
+--no-encoding|-no-encoding
+
+--no-encoding
+
+  If you don't want eMail to automatically use UTF-8 encoding when finding
+  non ascii characters, use this option.
+
+EOH
+  
+

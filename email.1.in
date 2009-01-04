@@ -235,6 +235,11 @@ If you'd like to use TLS/SSL communication with the
 smtp server, use this option (if it's not already
 set in the config file.)
 
+.TP
+.B \-\-no-encoding
+If you don't want eMail to automatically use UTF-8 encoding when finding
+non ascii characters, use this option.
+
 .SH CONFIGURATION
 Configuration of email is fairly simple.  Just open
 the default configuration file.  If you did not specify

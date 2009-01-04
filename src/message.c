@@ -226,13 +226,15 @@ printHeaders(const char *border, dstrbuf *msg, CharSetType msg_cs)
 	dstrbuf *dsb=NULL;
 
 	if (subject) {
-		CharSetType cs = getCharSet((u_char *)subject);
-		if (cs == IS_UTF8) {
-			dsb = encodeUtf8String((u_char *)subject, false);
-			subject = dsb->str;
-		} else if (cs == IS_PARTIAL_UTF8) {
-			dsb = encodeUtf8String((u_char *)subject, true);
-			subject = dsb->str;
+		if (Mopts.encoding) {
+			CharSetType cs = getCharSet((u_char *)subject);
+			if (cs == IS_UTF8) {
+				dsb = encodeUtf8String((u_char *)subject, false);
+				subject = dsb->str;
+			} else if (cs == IS_PARTIAL_UTF8) {
+				dsb = encodeUtf8String((u_char *)subject, true);
+				subject = dsb->str;
+			}
 		}
 		dsbPrintf(msg, "Subject: %s\r\n", subject);
 		if (dsb) {
@@ -482,7 +484,11 @@ createPlainEmail(dstrbuf *msg)
 		border = DSB_NEW;
 	}
 
-	cs = getCharSet((u_char *)msg->str);
+	if (Mopts.encoding) {
+		cs = getCharSet((u_char *)msg->str);
+	} else {
+		cs = IS_ASCII;
+	}
 	printHeaders(border->str, buf, cs);
 	if (makeMessage(msg, buf, border->str, cs) < 0) {
 		dsbDestroy(buf);

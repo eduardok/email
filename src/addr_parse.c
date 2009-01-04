@@ -139,13 +139,15 @@ formatEmailAddr(char *name, char *address)
 	proper_addr = stripEmailAddr(address);
 	if (name) {
 		proper_name = stripEmailName(name);
-		charset = getCharSet((u_char *)proper_name);
-		if (charset == IS_UTF8) {
-			dsb = encodeUtf8String((u_char *)proper_name, false);
-			proper_name = dsb->str;
-		} else if (charset == IS_PARTIAL_UTF8) {
-			dsb = encodeUtf8String((u_char *)proper_name, true);
-			proper_name = dsb->str;
+		if (Mopts.encoding) {
+			charset = getCharSet((u_char *)proper_name);
+			if (charset == IS_UTF8) {
+				dsb = encodeUtf8String((u_char *)proper_name, false);
+				proper_name = dsb->str;
+			} else if (charset == IS_PARTIAL_UTF8) {
+				dsb = encodeUtf8String((u_char *)proper_name, true);
+				proper_name = dsb->str;
+			}
 		}
 		dsbPrintf(ret, "\"%s\" <%s>", proper_name, proper_addr);
 		if (dsb) {
