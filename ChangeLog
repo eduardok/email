@@ -1,16 +1,4 @@
-May 15th 2008
-	- Missing header from smtpcommands.c added <termios.h>
-	- Some code cleanup
-
-April 12th 2008
-	- Able to disable TLS/SSL
-	- Use remove LF and use CRLF
-	- Fixed Seg Fault (due to double free) when using AUTH PLAIN
-
-April 5th 2008
-	- Rewrote most of the code to use dlib
-	- Added TLS/SSL support
-	- Changed how mime types are gathered (by file extension now)
-	- Code reformat
-	- Attachments are now specified with multiple -a options instead
-	  of comma delimeted.
+Jan 3rd 2009
+  - Added datarootdir to Makefiles (although still not using it)
+  - Fixed up configure.in.dist file to search for some libs
+  - Fixed up makefiles so compilation will happen properly.
