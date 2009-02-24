@@ -43,12 +43,9 @@ Q: How do I make your freakin' program work?
 
 A:  Well, first thing you should do, is configure this email client.
     You will have the configuration file in /usr/local/etc/email/email.conf
-    Another thing to look for in /usr/local/etc/email (Or the choosen 
-    --prefix during ./configure) is for a script named emailconf.  This
-    script will walk you through steps to fully configure email.  Some
-    less important options are not set (address_book, save_sent_mail, temp_dir
-    reply_to, signature_file, signature_divide) but you can easily set these
-    by hand and they are not needed to properly run email.
+    Some less important options are not set (address_book, save_sent_mail, 
+    temp_dir reply_to, signature_file, signature_divide) but you can easily set 
+    these by hand and they are not needed to properly run email.
 
     You will see it has a few options you must set to your environment.
 
