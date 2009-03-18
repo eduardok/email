@@ -67,22 +67,19 @@
 static void
 printMimeHeaders(const char *b, dstrbuf *msg, CharSetType charset)
 {
+	dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 	if (Mopts.gpg_opts & GPG_ENC) {
-		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/encrypted; "
 			"protocol=\"application/pgp-encrypted\"; " 
 			"boundary=\"%s\"\r\n", b);
 	} else if (Mopts.gpg_opts & GPG_SIG) {
-		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/signed; "
 			"micalg=pgp-sha1; protocol=\"application/pgp-signature\"; "
 			"boundary=\"%s\"\r\n", b);
 	} else if (Mopts.attach) {
-		dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 		dsbPrintf(msg, "Content-Type: multipart/mixed; boundary=\"%s\"\r\n", b);
 	} else {
 		if (charset == IS_UTF8 || charset == IS_PARTIAL_UTF8) {
-			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 			dsbPrintf(msg, "Content-Type: text/plain; charset=utf-8\r\n");
 			if (charset == IS_PARTIAL_UTF8) {
 				dsbPrintf(msg, "Content-Transfer-Encoding: quoted-printable\r\n");
@@ -91,7 +88,6 @@ printMimeHeaders(const char *b, dstrbuf *msg, CharSetType charset)
 			}
 			dsbPrintf(msg, "Content-Disposition: inline\r\n");
 		} else if (Mopts.html) {
-			dsbPrintf(msg, "Mime-Version: 1.0\r\n");
 			dsbPrintf(msg, "Content-Type: text/html\r\n");
 		} else {
 			dsbPrintf(msg, "Content-Type: text/plain\r\n");
