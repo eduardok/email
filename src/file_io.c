@@ -143,7 +143,9 @@ getFileContents(const char *filename)
 	tmp = DSB_NEW;
 	while (!feof(in)) {
 		dsbReadline(tmp, in);
+		chomp(tmp->str);
 		dsbCat(buf, tmp->str);
+		dsbCat(buf, "\r\n");
 	}
 	dsbDestroy(tmp);
 	fclose(in);
